@@ -134,6 +134,7 @@ const S = {
   busy: false,
   installEvt: null
 };
+window.store = store;   // Settings uses it from an inline onchange
 const saveQueue = () => { store.set('queue', S.queue); store.set('failed', S.failed); };
 
 /* ================= data model ================= */
@@ -218,7 +219,8 @@ const errText = (e) => {
 async function refresh(quiet) {
   if (!S.url || S.loading) return;
   if (S.queue.length || (store.get('rq', [])).length) { await sync(true); return; }
-  S.loading = true; softRender();
+  S.loading = true;
+  try { softRender(); } catch (e) { /* display problem must not block loading */ }
   try {
     const j = await apiGet();
     if (!j.ok) throw new Error(j.error || 'Sheet error');
@@ -226,7 +228,7 @@ async function refresh(quiet) {
   } catch (e) {
     S.error = errText(e);
     if (!quiet) toast(S.error, true);
-  } finally { S.loading = false; softRender(); }
+  } finally { S.loading = false; try { softRender(); } catch (e) { /* ignore */ } }
 }
 
 async function sync(quiet) {
@@ -897,12 +899,13 @@ async function submitDial() {
 
 /* ================= boot ================= */
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  const hadSW = !!navigator.serviceWorker.controller; let reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadSW && !reloaded) { reloaded = true; location.reload(); } });
   window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
 }
 onRoute();
 lastVis = Date.now();
 if (S.queue.length) sync(true); else refresh(true);
-})();
 
 /* ================= Reorder (button on low / out items -> WhatsApp) ================= */
 function reorderedFor(code) {
@@ -950,3 +953,4 @@ document.addEventListener('click', (ev) => {
     }
   } catch (e) { toast('Reorder had a problem. Nothing was lost.', true); }
 }, true);
+})();
