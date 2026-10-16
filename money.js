@@ -18,13 +18,15 @@
   const toast = (m, bad) => { try { if (window.ARTIME_toast) window.ARTIME_toast(m, bad); } catch (e) { /* ignore */ } };
   const banks = () => String((M.user && M.user.bank) || '').split(/[,;/|]/).map((x) => x.trim()).filter((x) => x && x.toLowerCase() !== 'cash');
 
-  async function post(body, u) {                       // never hangs, never throws
-    const c = new AbortController(), t = setTimeout(() => c.abort(), 20000);
+  async function post(body, u) {                       // never hangs, never throws; says why it failed
+    const c = new AbortController(), t = setTimeout(() => c.abort(), window.__MONEY_TMO || 15000);
     try {
       const r = await fetch(u || url(), { method: 'POST', body: JSON.stringify(body), signal: c.signal });
+      if (r.ok === false) return { ok: false, error: 'The Payments link returned an error (HTTP ' + r.status + '). Check the deployment: Execute as Me, access Anyone.' };
       try { return JSON.parse(await r.text()); } catch (e) { return { ok: false, error: 'The Payments link did not answer correctly. Use the link ending in /exec, deployed for Anyone.' }; }
-    } catch (e) { return { ok: false, net: true }; } finally { clearTimeout(t); }
+    } catch (e) { return { ok: false, net: true, why: c.signal.aborted ? 'no answer in 15 seconds' : String((e && e.message) || e) }; } finally { clearTimeout(t); }
   }
+  const netMsg = (j) => 'No connection (' + (j.why || 'unknown') + '). Check the internet and the Payments link, then try again.';
 
   let syncing = false, rt;
   const later = (ms) => { clearTimeout(rt); rt = setTimeout(sync, ms); };
@@ -73,7 +75,7 @@
       if (!M.user) {
         el.innerHTML = `<div class="form pay"><div class="card group"><h2>Enter your PIN</h2><p>Only the first time on this phone.</p>
           <div class="field"><input id="mpin" type="password" inputmode="numeric" enterkeyhint="go" autocomplete="off" placeholder="PIN"></div>
-          <div class="hint bad">${esc(M.msg)}</div><div class="btns"><button class="btn" style="background:var(--green)" data-m="pin">Continue</button></div></div></div>`;
+          <div class="hint bad" id="m-pmsg">${esc(M.msg)}</div><div class="btns"><button class="btn" style="background:var(--green)" data-m="pin">Continue</button><button class="btn ghost" data-m="ping">Test connection</button></div></div></div>`;
         return;
       }
       const bl = banks();
@@ -197,14 +199,19 @@
       } else if (a === 'bank') {
         M.bank = b.dataset.v; s('bank', M.bank); const i = $('#m-bank'); if (i) i.value = M.bank; flip('#money [data-m="bank"]', M.bank);
       } else if (a === 'syncnow') sync();
-      else if (a === 'pin') {
-        const pin = ($('#mpin') || {}).value; if (!pin) return; M.msg = 'Checking…'; draw();
+      else if (a === 'ping') {
+        const say2 = (x) => { const el = $('#m-pmsg'); if (el) el.textContent = x; };
+        say2('Checking…');
+        post({ action: 'ping' }).then((j) => say2(j.ok ? 'Payments sheet is reachable ✓' : (j.net ? netMsg(j) : j.error || 'Not reachable')));
+      } else if (a === 'pin') {
+        const pin = ($('#mpin') || {}).value; if (!pin) return;
+        const t0 = Date.now(), el0 = $('#m-pmsg'); if (el0) el0.textContent = 'Checking…';
+        const tick = setInterval(() => { const el = $('#m-pmsg'); if (el) el.textContent = 'Checking… ' + Math.round((Date.now() - t0) / 1000) + 's'; }, 1000);
         post({ action: 'login', pin, dev }).then((j) => {
           if (j.ok && !j.name) { M.msg = 'This PIN has no name in the Users tab. Type the name in the Name column.'; }
           else if (j.ok) { M.user = { name: j.name, bank: j.bank || '', admin: !!j.admin }; M.pin = pin; M.msg = ''; keep(); toast('Welcome ' + j.name); try { window.store.set('by', j.name); } catch (e) { /* ignore */ } sync(); if (window.ARTIME_render) setTimeout(window.ARTIME_render, 0); }
-          else M.msg = j.net ? 'No connection. Try again.' : (j.error || 'Wrong PIN');
-          draw();
-        });
+          else M.msg = j.net ? netMsg(j) : (j.error || 'Wrong PIN');
+        }).catch(() => { M.msg = 'Something went wrong. Try again.'; }).finally(() => { clearInterval(tick); draw(); });
       } else if (a === 'save') {
         const amt = parseFloat(String(($('#m-amt') || {}).value || '').replace(/,/g, ''));
         if (!(amt > 0)) { say('Enter an amount'); return; }
