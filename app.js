@@ -6,6 +6,20 @@ const CFG = window.APP_CONFIG || {};
 const APP_NAME = CFG.appName || 'ARTIME';
 const TAGLINE = CFG.tagline || 'Stock Management';
 const CLOCK_ITEMS = ['Clock Hands', 'PVC Ring', 'PVC Paper', 'Glass', 'Iron Ring', 'Machine', 'Iron Plate', 'Tikkla'];
+// Dial = a stand-alone item (no category). It is never bought, only made: one dial uses 1 each of Clock Hands, PVC Ring, PVC Paper, Glass, Iron Ring, Machine, Iron Plate and Tikkla of its size.
+// The Google Sheet ("Dial Recipe" tab) does the real deduction; this list is only used to show the parts on screen.
+const isDial = (c) => /^DIL-/.test(c || '');
+const isFormRoute = (n) => n === 'in' || n === 'out' || n === 'dial';
+function dialParts(code) {
+  const sz = String(code).slice(4); const s = (sz === '12' || sz === '18') ? '12-18' : sz;
+  return ['HND-' + s, 'PVR-' + s, 'PVP-' + s, 'GLS-' + s, 'IRR-' + s, 'MCH-ALL', 'IRP-' + s, sz === '06' ? 'TIK-06' : 'TIK-08-18'];
+}
+const DIAL_PART_NAMES = ['Clock Hands', 'PVC Ring', 'PVC Paper', 'Glass', 'Iron Ring', 'Machine', 'Iron Plate', 'Tikkla'];
+// A dial out with some parts left out carries a tag like [-TIK-08-18] in its note.
+// The Google Sheet ("Dial Recipe" tab) reads that tag and does not deduct that part.
+const skipTok = (c) => '[-' + c + ']';
+const skippedOf = (note) => { const out = []; String(note || '').replace(/\[-([A-Z0-9-]+)\]/g, (m, c) => { out.push(c); return m; }); return out; };
+const cleanNote = (note) => String(note || '').replace(/\s*\[-[A-Z0-9-]+\]/g, '').trim();
 const CAT_NAME = { clock: 'Clock Items', packing: 'Packaging Items' };
 
 /* ================= helpers ================= */
@@ -130,13 +144,16 @@ function parseName(name) {
 
 function items() {
   const pend = {};
-  S.queue.forEach((e) => { pend[e.code] = (pend[e.code] || 0) + (e.type === 'in' ? 1 : -1) * Number(e.qty); });
+  S.queue.forEach((e) => {
+    pend[e.code] = (pend[e.code] || 0) + (e.type === 'in' ? 1 : -1) * Number(e.qty);
+    if (e.type === 'out' && isDial(e.code)) { const sk = skippedOf(e.note); dialParts(e.code).filter((c) => !sk.includes(c)).forEach((c) => { pend[c] = (pend[c] || 0) - Number(e.qty); }); }
+  });
   return S.items.map((r) => {
     const p = parseName(r.item);
     const d = pend[r.code] || 0;
     const eff = r.stock + d;
-    const cat = r.cat || (CLOCK_ITEMS.includes(p.base) ? 'clock' : 'packing');
-    const st = r.status === '-' && d === 0 ? 'none' : eff <= 0 ? 'out' : eff <= r.min ? 'low' : 'ok';
+    const cat = isDial(r.code) ? 'dial' : r.cat || (CLOCK_ITEMS.includes(p.base) ? 'clock' : 'packing');
+    const st = isDial(r.code) || (r.status === '-' && d === 0) ? 'none' : eff <= 0 ? 'out' : eff <= r.min ? 'low' : 'ok';
     const sz = sizeLabel(r.size);
     return Object.assign({}, r, p, { cat, pend: d, eff, st, sz, title: r.item + (sz ? ' - ' + sz : '') });
   });
@@ -206,6 +223,7 @@ async function sync(quiet) {
   if (S.syncing || !S.queue.length || !S.url) return;
   S.syncing = true; softRender();
   const batch = S.queue.slice();
+  let okRun = false;
   try {
     const j = await apiPost({ entries: batch.map(({ id, type, code, qty, date, party, ref, note }) => ({ id, type, code, qty, date, party, ref, note })) });
     if (!j.ok) throw new Error(j.error || 'Sheet error');
@@ -221,10 +239,14 @@ async function sync(quiet) {
     S.queue = S.queue.filter((e) => !done.has(e.id));
     saveQueue();
     applyData(j);
+    okRun = true;
   } catch (e) {
     S.error = errText(e);
     if (!quiet) toast('Saved on this phone. ' + S.error, true);
-  } finally { S.syncing = false; softRender(); }
+  } finally {
+    S.syncing = false; softRender();
+    if (okRun && S.queue.length) setTimeout(() => sync(true), 0);   // entries added while this sync was running
+  }
 }
 
 /* ================= router ================= */
@@ -238,11 +260,13 @@ function onRoute() {
   const r = route();
   const key = location.hash;
   if (r.name === 'items') S.filter = { q: '', cat: r.q.get('cat') || 'all', status: r.q.get('status') || 'all' };
-  if (r.name === 'in' || r.name === 'out') {
+  if (isFormRoute(r.name)) {
     const f = ensureForm(r.name);
     f.date = today();
+    if (r.name === 'dial') f.skip = [];     // every part ticked each time, so nothing is left out by mistake
     const code = r.q.get('code');
-    if (code) f.wantCode = code;
+    if (code && r.name === 'dial') f.dcode = code;
+    else if (code) f.wantCode = code;
   }
   lastRouteKey = key;
   S.sheet = null;
@@ -254,16 +278,17 @@ function onRoute() {
 /* ================= render ================= */
 function render() {
   const r = route();
-  const isForm = r.name === 'in' || r.name === 'out';
+  const isForm = isFormRoute(r.name);
   const app = $('#app');
   app.className = isForm ? 'noNav' : '';
   let top = '', body = '';
   switch (r.name) {
     case 'in': case 'out': top = topForm(r.name); body = vForm(r.name); break;
+    case 'dial': top = topForm('dial'); body = vDial(); break;
     case 'items': top = topPlain('Items', 'View and manage all items', true); body = vItems(); break;
     case 'categories': top = topPlain('Categories', 'Manage item categories', true); body = vCategories(); break;
     case 'reports': top = topPlain('Reports', 'Stock movement over time'); body = vReports(); break;
-    case 'more': top = topPlain('More'); body = vMore(); break;
+    case 'more': top = topPlain('Settings'); body = vMore(); break;
     default: top = topHome(); body = vHome();
   }
   app.innerHTML = top + body;
@@ -275,7 +300,7 @@ function render() {
 function softRender() {
   const r = route();
   const ae = document.activeElement;
-  if (r.name === 'in' || r.name === 'out') { updateFormDynamic(); return; }
+  if (isFormRoute(r.name)) { updateFormDynamic(); return; }
   if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'SELECT')) { if (r.name === 'items') renderItemList(); return; }
   render();
 }
@@ -283,7 +308,7 @@ function softRender() {
 function topHome() {
   const alerts = items().filter((i) => i.st === 'out' || i.st === 'low').length;
   return `<header class="top">
-    <a class="ibtn" href="#/more" aria-label="Menu">${ic('menu', 26)}</a>
+    <button class="ibtn" data-act="menu" aria-label="Menu">${ic('menu', 26)}</button>
     <div class="grow"><h1>${esc(APP_NAME)}</h1><div class="sub">${esc(TAGLINE)}</div></div>
     <a class="ibtn" href="#/items?focus=1" aria-label="Search">${ic('search', 26)}</a>
     <a class="ibtn" href="#/items?status=alert" aria-label="Low stock alerts">${ic('bell', 26)}${alerts ? '<span class="dot"></span>' : ''}</a>
@@ -293,6 +318,8 @@ function topPlain(title, sub, back) {
   return `<header class="top plain">${back ? `<a class="ibtn" href="#/home" aria-label="Back">${ic('left', 26)}</a>` : ''}<div class="grow"><h1>${esc(title)}</h1>${sub ? `<div class="sub">${esc(sub)}</div>` : ''}</div></header>`;
 }
 function topForm(type) {
+  if (type === 'dial') return `<header class="top center"><a class="ibtn" href="#/home" aria-label="Back">${ic('left', 26)}</a>
+    <div class="grow"><h1>Dial Out</h1><div class="sub">Make dials - the parts go out together</div></div><span class="spacer"></span></header>`;
   return `<header class="top center"><a class="ibtn" href="#/home" aria-label="Back">${ic('left', 26)}</a>
     <div class="grow"><h1>Stock ${type === 'in' ? 'In' : 'Out'}</h1><div class="sub">${type === 'in' ? 'Add incoming stock to inventory' : 'Remove stock from inventory'}</div></div><span class="spacer"></span></header>`;
 }
@@ -316,12 +343,39 @@ function ago_(ms) {
 
 function navHTML(name) {
   const on = (n) => (n === name || (n === 'items' && name === 'categories') ? 'on' : '');
-  return `<a class="n ${on('home') || (name === 'home' ? 'on' : '')}" href="#/home">${ic('home', 26)}Home</a>
+  const pay = store.get('pref', 'stock') === 'pay';
+  const stockFab = `<span class="fabwrap"><button class="fab" data-act="add" aria-label="Add stock entry">${ic('plus', 30, 2.4)}</button></span>`;
+  const payFab = `<span class="fabwrap"><button class="fab pay" data-m="open" aria-label="Payments">${ic('plus', 30, 2.4)}</button></span>`;
+  const stockTab = `<button class="n" data-act="add">${ic('up', 26)}Stock</button>`;
+  const payTab = `<button class="n paytab" data-m="open">${ic('plus', 26)}Payments</button>`;
+  return `<a class="n ${on('home')}" href="#/home">${ic('home', 26)}Home</a>
     <a class="n ${on('items')}" href="#/items">${ic('cube', 26)}Items</a>
-    <span class="fabwrap"><button class="fab" data-act="add" aria-label="Add stock entry">${ic('plus', 30, 2.4)}</button></span>
-    <a class="n ${on('reports')}" href="#/reports">${ic('chart', 26)}Reports</a>
-    <a class="n ${on('more')}" href="#/more">${ic('more', 26)}More</a>`;
+    ${pay ? payFab : stockFab}
+    ${pay ? stockTab : payTab}
+    <a class="n ${on('reports')}" href="#/reports">${ic('chart', 26)}Reports</a>`;
 }
+
+/* ---------- Settings: preference + payments link (payments code loads only when used) ---------- */
+function prefHTML() {
+  const pay = store.get('pref', 'stock') === 'pay', mu = store.get('money.url', '') || (window.APP_CONFIG && APP_CONFIG.moneyUrl) || '';
+  const who = (() => { try { return (JSON.parse(localStorage.getItem('artime.money.user')) || {}).name || ''; } catch (e) { return ''; } })();
+  return `<div class="card prefcard"><b>Main button</b><small>Pick what you use most. It sits in the middle of the bar.</small>
+    <div class="seg"><button class="${pay ? '' : 'on'}" data-m="pref" data-v="stock">Stock <i class="dot b"></i></button><button class="${pay ? 'on g' : ''}" data-m="pref" data-v="pay">Payments <i class="dot g"></i></button></div></div>
+    <div class="card prefcard"><b>Payments</b><small>${who ? 'Logged in as ' + esc(who) : 'Not logged in'}${mu ? ' · sheet connected' : ' · no sheet link yet'}</small>
+    <input id="murl" placeholder="Payments Google Sheet link" value="${mu ? esc(mu.slice(0, 40)) + '…' : ''}" onfocus="this.value=''">
+    <div class="seg"><button data-m="saveurl">Test and save link</button>${who ? '<button data-m="logout">Log out</button>' : ''}</div></div>`;
+}
+function withMoney(cb) {
+  if (window.Money) return cb();
+  const sc = document.createElement('script'); sc.src = 'money.js'; sc.onload = cb;
+  sc.onerror = () => alert('Payments could not load. Check your connection.'); document.head.appendChild(sc);
+}
+document.addEventListener('click', (ev) => {
+  const b = ev.target.closest('[data-m]'); if (!b) return;
+  if (b.dataset.m === 'pref') { store.set('pref', b.dataset.v); render(); return; }
+  withMoney(() => window.Money.act(b.dataset.m, b));
+});
+try { if ((JSON.parse(localStorage.getItem('artime.money.q')) || []).length) withMoney(() => window.Money.boot()); } catch (e) { /* ignore */ }
 
 /* ---------- Home ---------- */
 function vHome() {
@@ -333,7 +387,7 @@ function vHome() {
       : `<div class="card empty"><b>No stock data yet</b>${esc(S.error || 'Tap the sync line above to load from Google Sheets.')}</div>`;
   }
   const total = its.length;
-  const stock = its.reduce((a, i) => a + i.eff, 0);
+  const stock = its.filter((i) => !isDial(i.code)).reduce((a, i) => a + i.eff, 0);
   const outN = its.filter((i) => i.st === 'out').length;
   const lowN = its.filter((i) => i.st === 'low').length;
   const alerts = its.filter((i) => i.st === 'out' || i.st === 'low').sort((a, b) => (a.st === 'out' ? 0 : 1) - (b.st === 'out' ? 0 : 1) || a.eff - b.eff).slice(0, 4);
@@ -376,8 +430,10 @@ function itemRow(i) {
 }
 function actRow(e, nm) {
   const inn = e.type === 'in';
+  const dl = !inn && isDial(e.code);
+  const left = dl ? skippedOf(e.note).map((c) => String(nm[c] || c).split(' - ')[0]) : [];
   return `<div class="act"><span class="aic ${inn ? 'in' : 'out'}">${ic(inn ? 'up' : 'down', 22, 2.2)}</span>
-    <div class="am"><b>Stock ${inn ? 'In' : 'Out'}</b><span>${esc(nm[e.code] || e.code)}</span></div>
+    <div class="am"><b>${dl ? 'Dial Out' : 'Stock ' + (inn ? 'In' : 'Out')}</b><span>${esc(nm[e.code] || e.code)}${left.length ? ' - without ' + esc(left.join(', ')) : ''}</span></div>
     <div class="ar"><b class="${inn ? 'g' : 'r'}">${inn ? '+' : '-'}${num(e.qty)}</b><span class="${e.pending ? 'pend' : ''}">${e.pending ? 'Waiting to sync' : esc(when(e))}</span></div></div>`;
 }
 
@@ -485,7 +541,8 @@ function vReports() {
 }
 
 /* ---------- More ---------- */
-function vMore() {
+function vMore() { return prefHTML() + vMore0(); }
+function vMore0() {
   const q = S.queue, f = S.failed;
   const nm = {}; items().forEach((i) => { nm[i.code] = i.title; });
   const ent = (e, x) => `<div class="q"><span class="aic ${e.type}" style="width:38px;height:38px">${ic(e.type === 'in' ? 'up' : 'down', 18, 2.2)}</span><div class="m"><b>${e.type === 'in' ? '+' : '-'}${num(e.qty)} ${esc(nm[e.code] || e.code)}</b><small>${esc(dShort(e.date))}${e.msg ? ' - ' + esc(e.msg) : ''}</small></div><button class="x" data-act="${x}" data-id="${esc(e.id)}">Discard</button></div>`;
@@ -508,7 +565,7 @@ function vMore() {
 
 /* ---------- Stock In / Out form ---------- */
 function ensureForm(type) {
-  if (!S.form[type]) S.form[type] = { cat: 'packing', base: null, variant: null, size: null, qty: 1, date: today(), party: '', ref: '', note: '', used: '' };
+  if (!S.form[type]) S.form[type] = { t: type, cat: 'packing', base: null, variant: null, size: null, qty: 1, date: today(), party: '', ref: '', note: '', used: '', skip: [] };
   return S.form[type];
 }
 function resolve(f) {
@@ -517,7 +574,7 @@ function resolve(f) {
     if (it) { Object.assign(f, { cat: it.cat, base: it.base, variant: it.variant, size: it.size }); f.wantCode = null; }
     else if (S.items.length) f.wantCode = null;
   }
-  const its = items().filter((i) => i.cat === f.cat);
+  const its = items().filter((i) => i.cat === f.cat && !isDial(i.code));
   const bases = uniq(its.map((i) => i.base));
   if (!bases.includes(f.base)) f.base = bases[0] || null;
   const rows = its.filter((i) => i.base === f.base);
@@ -570,7 +627,8 @@ function formState(type) {
   return { f, R, row, q, avail, err, ok: !err };
 }
 function updateFormDynamic() {
-  const r = route(); if (r.name !== 'in' && r.name !== 'out') return;
+  const r = route(); if (r.name === 'dial') { updateDial(); return; }
+  if (r.name !== 'in' && r.name !== 'out') return;
   const type = r.name; const st = formState(type); const row = st.row;
   const card = $('#fcard'); if (!card) return;
   if (!row) { card.innerHTML = `<div class="empty-card">${S.items.length ? 'No matching item.' : 'No items loaded yet. Go back and sync first.'}</div>`; }
@@ -594,30 +652,29 @@ async function submitForm(type) {
   S.busy = true;
   const f = st.f;
   const e = { id: newId(), ts: Date.now(), type, code: st.row.code, qty: st.q, date: f.date || today(), party: (type === 'in' ? f.party : f.used).trim(), ref: f.ref.trim(), note: f.note.trim() };
-  S.queue.push(e); saveQueue();
+  S.queue.push(e); saveQueue();             // entry has a unique id, so the sheet can never double-count it
   const unit = unitLabel(st.row.unit);
-  const pop = { kind: type, title: 'Added to Stock ' + (type === 'in' ? 'In' : 'Out'), item: st.row.title, qty: (type === 'in' ? '+' : '-') + num(e.qty) + ' ' + unit, status: 'busy', msg: 'Saving to Google Sheets...' };
+  const now = items().find((i) => i.code === e.code);
+  const pop = { kind: type, title: 'Added to Stock ' + (type === 'in' ? 'In' : 'Out'), item: st.row.title, qty: (type === 'in' ? '+' : '-') + num(e.qty) + ' ' + unit, now: now ? 'Stock now ' + num(now.eff) + ' ' + unit : '', status: 'ok', msg: navigator.onLine && S.url ? 'Saving to Google Sheets in background' : 'Saved on this phone. It will sync when you are online.' };
+  if (!navigator.onLine || !S.url) pop.status = 'warn';
   f.qty = 1; f.ref = ''; f.note = '';
   render();
-  const t0 = Date.now();
   showPopup(pop);
-
-  let outcome;
-  if (!navigator.onLine || !S.url) outcome = 'offline';
-  else {
-    await sync(true);
-    outcome = S.failed.some((x) => x.id === e.id) ? 'rejected' : S.queue.some((x) => x.id === e.id) ? 'offline' : 'saved';
-  }
-  const now = items().find((i) => i.code === e.code);
-  pop.now = now ? 'Stock now ' + num(now.eff) + ' ' + unit : '';
-  if (outcome === 'saved') { pop.status = 'ok'; pop.msg = 'Saved to Google Sheets'; }
-  else if (outcome === 'offline') { pop.status = 'warn'; pop.msg = 'Saved on this phone. It will sync when you are online.'; }
-  else { pop.status = 'bad'; pop.kind = 'bad'; pop.title = 'Not added'; pop.msg = 'The sheet rejected it: ' + (S.failed.find((x) => x.id === e.id) || {}).msg; }
-  showPopup(pop);
-  if (outcome === 'rejected') return;      // stays until the person taps OK
-  const wait = Math.max(t0 + 2000 - Date.now(), 1000);   // at least 2 seconds in total
   clearTimeout(popT);
-  popT = setTimeout(closePopup, wait);
+  popT = setTimeout(closePopup, 1200);      // popup is instant; the sheet saves in the background
+  flushEntry(e.id, pop);
+}
+// send to the sheet without blocking the screen; only interrupt if the sheet rejects the entry
+async function flushEntry(id, pop) {
+  if (!navigator.onLine || !S.url) return;
+  while (S.syncing) await new Promise((r) => setTimeout(r, 200));
+  if (S.queue.some((x) => x.id === id)) await sync(true);
+  const bad = S.failed.find((x) => x.id === id);
+  if (bad) {
+    clearTimeout(popT);
+    showPopup(Object.assign({}, pop, { kind: 'bad', status: 'bad', title: 'Not added', now: '', msg: 'The sheet rejected it: ' + bad.msg }));
+    S.busy = true;                          // stays until the person taps OK
+  }
 }
 
 /* ---------- confirmation popup ---------- */
@@ -637,10 +694,30 @@ function closePopup() { clearTimeout(popT); $('#popup').innerHTML = ''; S.busy =
 function renderSheet() {
   const el = $('#sheet'); const s = S.sheet;
   if (!s) { el.innerHTML = ''; return; }
+  if (s.type === 'menu') {
+    const link = (href, icon, title, sub) => `<a class="mi" href="${href}">${ic(icon, 24)}<span><b>${title}</b><small>${sub}</small></span>${ic('right', 18)}</a>`;
+    const al = items().filter((i) => i.st === 'out' || i.st === 'low').length;
+    el.innerHTML = `<div class="scrim side" data-act="close"><aside class="drawer" role="dialog" aria-label="Menu">
+      <div class="dh"><b>${esc(APP_NAME)}</b><small>${esc(TAGLINE)}</small></div>
+      <div class="dsec">Quick actions</div>
+      ${link('#/dial', 'gear', 'Dial Out', 'Make dials, choose the parts')}
+      ${link('#/in', 'up', 'Stock In', 'Add incoming stock')}
+      ${link('#/out', 'down', 'Stock Out', 'Record outgoing stock')}
+      <div class="dsec">Browse</div>
+      ${link('#/items', 'cube', 'All Items', 'Search and filter')}
+      ${link('#/items?status=alert', 'bell', 'Low Stock Alerts', al ? al + ' need attention' : 'Nothing running low')}
+      ${link('#/categories', 'grid', 'Categories', 'Packaging and clock items')}
+      ${link('#/reports', 'chart', 'Reports', 'Stock movement over time')}
+      <div class="dsec">App</div>
+      ${link('#/more', 'gear', 'Settings', 'Main button, payments, sheet link')}
+    </aside></div>`;
+    return;
+  }
   if (s.type === 'add') {
     el.innerHTML = `<div class="scrim" data-act="close"><div class="sheet" role="dialog" aria-label="New entry"><div class="grab"></div><h3>New entry</h3><div class="acts">
       <a class="bigact in" href="#/in">${ic('up', 34, 2.2)}<span><b>Stock In</b><small>Add incoming stock</small></span></a>
-      <a class="bigact out" href="#/out">${ic('down', 34, 2.2)}<span><b>Stock Out</b><small>Record outgoing stock</small></span></a></div></div></div>`;
+      <a class="bigact out" href="#/out">${ic('down', 34, 2.2)}<span><b>Stock Out</b><small>Record outgoing stock</small></span></a>
+      <a class="bigact dial" href="#/dial">${ic('gear', 34, 2.2)}<span><b>Dial Out</b><small>Make dials - all parts go out together</small></span></a></div></div></div>`;
     return;
   }
   const it = items().find((i) => i.code === s.code);
@@ -650,7 +727,7 @@ function renderSheet() {
   el.innerHTML = `<div class="scrim" data-act="close"><div class="sheet" role="dialog" aria-label="${esc(it.title)}"><div class="grab"></div>
     <div class="hd">${art(it.base, 64)}<div style="flex:1;min-width:0"><b>${esc(it.title)}</b><small>${esc(it.code)}</small></div>${pill(it.st)}</div>
     <div class="nums"><div><small>Current Stock</small><b>${num(it.eff)}</b></div><div><small>Reorder Level</small><b>${num(it.min)}</b></div><div><small>Unit</small><b style="font-size:17px;line-height:2">${esc(unitLabel(it.unit))}</b></div></div>
-    <div class="two" style="margin-top:0"><a class="bigact in" style="padding:14px" href="#/in?code=${encodeURIComponent(it.code)}">${ic('up', 26, 2.2)}<b style="font-size:17px">Stock In</b></a><a class="bigact out" style="padding:14px" href="#/out?code=${encodeURIComponent(it.code)}">${ic('down', 26, 2.2)}<b style="font-size:17px">Stock Out</b></a></div>
+    ${isDial(it.code) ? `<div class="two" style="margin-top:0"><a class="bigact dial" style="padding:14px" href="#/dial?code=${encodeURIComponent(it.code)}">${ic('gear', 26, 2.2)}<b style="font-size:17px">Dial Out</b></a></div>` : `<div class="two" style="margin-top:0"><a class="bigact in" style="padding:14px" href="#/in?code=${encodeURIComponent(it.code)}">${ic('up', 26, 2.2)}<b style="font-size:17px">Stock In</b></a><a class="bigact out" style="padding:14px" href="#/out?code=${encodeURIComponent(it.code)}">${ic('down', 26, 2.2)}<b style="font-size:17px">Stock Out</b></a></div>`}
     <h4>Recent movements</h4>${mv.length ? mv.map((e) => actRow(e, nm)).join('') : '<div class="empty" style="padding:14px">No movements for this item yet.</div>'}</div></div>`;
 }
 
@@ -670,6 +747,7 @@ document.addEventListener('click', (ev) => {
     case 'sync': S.queue.length ? sync() : refresh(); break;
     case 'refresh': refresh(); break;
     case 'add': S.sheet = { type: 'add' }; renderSheet(); break;
+    case 'menu': S.sheet = { type: 'menu' }; renderSheet(); break;
     case 'close': if (ev.target === el) { S.sheet = null; renderSheet(); } break;
     case 'open-item': S.sheet = { type: 'item', code: el.dataset.code }; renderSheet(); break;
     case 'go-more': location.hash = '#/more'; break;
@@ -678,6 +756,9 @@ document.addEventListener('click', (ev) => {
     case 'rrange': S.repRange = Number(v); render(); break;
     case 'fcat': ensureForm(type).cat = v; render(); break;
     case 'fsize': ensureForm(type).size = v; render(); break;
+    case 'dpart': { const f = ensureForm('dial'); const i = Number(v); f.skip = f.skip.includes(i) ? f.skip.filter((x) => x !== i) : f.skip.concat(i); updateDial(); break; }
+    case 'dall': { const f = ensureForm('dial'); f.skip = f.skip.length ? [] : DIAL_PART_NAMES.map((_, i) => i); updateDial(); break; }
+    case 'dsize': ensureForm('dial').dcode = v; render(); break;
     case 'fvar': ensureForm(type).variant = v; render(); break;
     case 'qplus': case 'qminus': {
       const f = ensureForm(type); const n = Number(f.qty) || 0;
@@ -685,7 +766,7 @@ document.addEventListener('click', (ev) => {
       const i = $('#qty'); if (i) i.value = f.qty; updateFormDynamic(); break;
     }
     case 'pick': { const i = $('#date'); if (i && i.showPicker) { try { i.showPicker(); } catch (e) { /* not supported */ } } break; }
-    case 'submit': submitForm(type); break;
+    case 'submit': if (type === 'dial') submitDial(); else submitForm(type); break;
     case 'pop-ok': closePopup(); break;
     case 'save-url': {
       const val = ($('#url').value || '').trim();
@@ -704,7 +785,7 @@ document.addEventListener('input', (ev) => {
   const k = el.dataset.bind, r = route(), type = r.name;
   if (k === 'q') { S.filter.q = el.value; renderItemList(); return; }
   if (k === 'url') return;
-  if (type !== 'in' && type !== 'out') return;
+  if (!isFormRoute(type)) return;
   const f = ensureForm(type);
   if (k === 'qty') { f.qty = el.value; updateFormDynamic(); }
   else if (k === 'date') { f.date = el.value || today(); const v = $('.datef .val'); if (v) v.textContent = dLong(f.date); }
@@ -726,6 +807,79 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); S.installEvt = e; if (['more', 'home'].includes(route().name)) render(); });
 window.addEventListener('appinstalled', () => { S.installEvt = null; toast('App installed'); });
+
+/* ---------- Dial Out form ---------- */
+function dialState() {
+  const f = ensureForm('dial');
+  const ds = items().filter((i) => isDial(i.code));
+  if (!ds.some((d) => d.code === f.dcode)) f.dcode = ds.length ? ds[0].code : null;
+  const row = ds.find((d) => d.code === f.dcode) || null;
+  const q = Number(f.qty);
+  const byCode = {}; items().forEach((i) => { byCode[i.code] = i; });
+  const parts = row ? dialParts(row.code).map((c, i) => ({ i, code: c, name: DIAL_PART_NAMES[i], it: byCode[c], on: !f.skip.includes(i) })).filter((p) => p.it) : [];
+  const chosen = parts.filter((p) => p.on);
+  const short = chosen.filter((p) => p.it.eff < q);
+  const limit = chosen.length ? chosen.reduce((a, p) => (p.it.eff < a.it.eff ? p : a)) : null;
+  const canMake = limit ? Math.max(0, Math.floor(limit.it.eff)) : 0;
+  let err = '';
+  if (!row) err = 'Choose a dial size.'; else if (!(q > 0)) err = 'Enter a quantity above 0.'; else if (!chosen.length) err = 'Tick at least one part.';
+  return { f, ds, row, q, parts, chosen, short, limit, canMake, err, ok: !err };
+}
+function vDial() {
+  const st = dialState(); const f = st.f;
+  const usedFor = uniq(['Production', 'Order', 'Sample'].concat(S.history.filter((e) => e.type === 'out' && e.party).map((e) => e.party))).slice(0, 40);
+  return `<div class="form dial">
+    <div class="fl">Dial size<i>*</i></div>
+    <div class="sizes">${st.ds.map((d) => `<button class="size ${d.code === f.dcode ? 'on' : ''}" data-act="dsize" data-v="${esc(d.code)}">${esc(sizeLabel(d.size) || d.size)}</button>`).join('') || '<div class="empty-card">No dial items loaded yet. Go back and sync first.</div>'}</div>
+    <div id="fcard"></div>
+    <label class="fl" for="qty">How many dials<i>*</i></label>
+    <div class="qty"><button data-act="qminus" aria-label="Decrease">${ic('minus', 22, 2.2)}</button><input id="qty" type="number" inputmode="decimal" min="0" step="any" value="${esc(f.qty)}" data-bind="qty"><button data-act="qplus" aria-label="Increase">${ic('plus', 22, 2.2)}</button><span class="unit">Pcs</span></div>
+    <div class="hint" id="qhint"></div>
+    <div class="fl" style="margin-top:8px">Date<i>*</i></div>
+    <div class="field datef" data-act="pick">${ic('cal', 22)}<span class="val">${esc(dLong(f.date))}</span>${ic('chev', 20)}<input id="date" type="date" value="${esc(f.date)}" data-bind="date" aria-label="Date"></div>
+    <div class="pair">
+      <div><label class="fl" for="used">Used for</label><div class="field">${ic('layers', 22)}<input id="used" list="dl-used" placeholder="Production" value="${esc(f.used)}" data-bind="used" autocomplete="off"><datalist id="dl-used">${usedFor.map((x) => `<option value="${esc(x)}">`).join('')}</datalist></div></div>
+      <div><label class="fl" for="ref">Reference No.</label><div class="field">${ic('file', 22)}<input id="ref" placeholder="Voucher / Order No." value="${esc(f.ref)}" data-bind="ref" autocomplete="off"></div></div>
+    </div>
+    <label class="fl" for="note">Notes <small>(optional)</small></label>
+    <div class="field">${ic('pencil', 20)}<input id="note" placeholder="Add notes..." value="${esc(f.note)}" data-bind="note" autocomplete="off"></div>
+    <button class="submit" id="fsubmit" data-act="submit">${ic('down', 24, 2.2)}<span>Record Dial Out</span></button>
+  </div>`;
+}
+function updateDial() {
+  const st = dialState(); const card = $('#fcard'); if (!card) return;
+  const q = st.q > 0 ? st.q : 0;
+  if (st.row) {
+    card.innerHTML = `<div class="pcard"><div class="head">${art('Dial', 76)}<div><b>${esc(st.row.code)}</b><small>${esc(st.row.title)}</small></div></div>
+      <div class="parts-h"><span>Tick the parts that go out for ${num(q)} dial${q === 1 ? '' : 's'}</span><button class="selall" data-act="dall">${st.parts.some((p) => !p.on) ? 'Select all' : 'Clear all'}</button></div>
+      ${st.parts.map((p) => `<button class="part pick ${p.on ? 'on' : 'off'}" data-act="dpart" data-v="${p.i}" role="checkbox" aria-checked="${p.on}"><span class="cb">${p.on ? ic('check', 16, 3) : ''}</span><span class="pn">${esc(p.it.title)}</span>${p.on ? `<span class="pv">${num(p.it.eff)} &rarr; <b class="${p.it.eff - q < 0 ? 'r' : ''}">${num(p.it.eff - q)}</b></span>` : '<span class="pv skip">Not used</span>'}</button>`).join('')}</div>`;
+  } else card.innerHTML = '';
+  const hint = $('#qhint');
+  if (hint) {
+    if (st.row && st.short.length && q > 0) { hint.textContent = 'Not enough ' + st.short.map((p) => p.it.title).join(', ') + '. Stock will go below zero.'; hint.className = 'hint bad'; }
+    else if (st.row && st.limit) { hint.textContent = `Stock allows up to ${num(st.canMake)} dial${st.canMake === 1 ? '' : 's'} (limited by ${st.limit.name}).`; hint.className = 'hint'; }
+    else { hint.textContent = ''; hint.className = 'hint'; }
+  }
+  const btn = $('#fsubmit'); if (btn) btn.disabled = !st.ok;
+}
+async function submitDial() {
+  if (S.busy) return;
+  const st = dialState(); if (!st.ok) return;
+  S.busy = true;
+  const f = st.f;
+  const left = st.parts.filter((p) => !p.on);
+  const note = [(f.note || '').trim()].concat(left.map((p) => skipTok(p.code))).filter(Boolean).join(' ');
+  const e = { id: newId(), ts: Date.now(), type: 'out', code: st.row.code, qty: st.q, date: f.date || today(), party: (f.used || '').trim() || 'Production', ref: (f.ref || '').trim(), note };
+  S.queue.push(e); saveQueue();
+  const online = navigator.onLine && S.url;
+  const pop = { kind: 'out', title: 'Dial Out recorded', item: st.row.title, qty: '-' + num(e.qty) + ' dial' + (e.qty === 1 ? '' : 's'), now: left.length ? 'Without ' + left.map((p) => p.name).join(', ') : 'All parts for this size were taken out', status: online ? 'ok' : 'warn', msg: online ? 'Saving to Google Sheets in background' : 'Saved on this phone. It will sync when you are online.' };
+  f.qty = 1; f.ref = ''; f.note = ''; f.skip = [];
+  render();
+  showPopup(pop);
+  clearTimeout(popT);
+  popT = setTimeout(closePopup, 1200);
+  flushEntry(e.id, pop);
+}
 
 /* ================= boot ================= */
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
