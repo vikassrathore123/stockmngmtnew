@@ -952,6 +952,7 @@ document.addEventListener('click', (ev) => {
     const r = ev.target.closest('[data-r]'), x = ev.target.closest('[data-rx]');
     if (r) { ev.stopPropagation(); ev.preventDefault(); openReorder(r.dataset.r); return; }
     if (!x) return;
+    if (x.classList.contains('rsb') && ev.target !== x) return;     // tapping inside the popup (quantity, message) must not close it
     ev.stopPropagation();
     const el = document.getElementById('rs');
     if (x.dataset.rx === 'close') { if (el) el.remove(); return; }
