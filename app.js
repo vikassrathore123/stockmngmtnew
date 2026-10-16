@@ -120,10 +120,12 @@ const HI = {
   'No connection. Try again.': 'कनेक्शन नहीं है। फिर कोशिश करें।', 'Wrong PIN': 'गलत PIN', 'Connected ✓': 'जुड़ गया ✓', 'Could not connect. Your old link is kept.': 'जुड़ नहीं सके। पुराना लिंक रखा गया है।',
   'That does not look like a Google Apps Script link.': 'यह Google Apps Script का लिंक नहीं लगता।', 'No connection. Showing the last saved report.': 'कनेक्शन नहीं है। आख़िरी सेव की हुई रिपोर्ट दिख रही है।',
   'Something went wrong in Payments. Your saved entries are safe.': 'भुगतान में कुछ गड़बड़ हुई। आपकी सेव एंट्री सुरक्षित हैं।', 'That PIN belongs to someone else.': 'यह PIN किसी और का है।',
+  'This PIN has no name in the Users tab. Type the name in the Name column.': 'इस PIN के आगे Users टैब में नाम नहीं है। Name कॉलम में नाम लिखें।', 'The Payments link did not answer correctly. Use the link ending in /exec, deployed for Anyone.': 'भुगतान लिंक ने सही जवाब नहीं दिया। /exec पर खत्म होने वाला लिंक इस्तेमाल करें, जो Anyone के लिए डिप्लॉय हो।', 'User list unavailable. Try again later.': 'यूज़र सूची उपलब्ध नहीं। बाद में कोशिश करें।', 'This PIN is used by two people. Ask the admin.': 'यह PIN दो लोगों का है। एडमिन से कहें।',
   'Too many wrong PINs. Wait 10 minutes.': 'बहुत ज़्यादा गलत PIN। 10 मिनट रुकें।', 'This user is switched off.': 'यह यूज़र बंद है।'
 };
 const trAge = (s) => s.replace(/^just now$/, 'अभी').replace(/^(\d+) min ago$/, '$1 मिनट पहले').replace(/^(\d+) h ago$/, '$1 घंटे पहले');
 const HI_RULES = [
+  [/^Welcome (.+)$/, (m) => 'स्वागत है ' + m[1]],
   [/^(Today|Yesterday)(, .*)?$/, (m) => T(m[1]) + (m[2] || '')],
   [/^(\d+) min ago$/, (m) => m[1] + ' मिनट पहले'],
   [/^(\d+) h ago$/, (m) => m[1] + ' घंटे पहले'],
@@ -756,7 +758,7 @@ function vMore0() {
     <div class="sethead">App</div>
     <div class="card group"><h2>Install app</h2><p>${isStandalone() ? 'Installed. You are using the app version.' : installable ? 'Add ARTIME Stock to your home screen so it opens like a normal app.' : ios ? 'On iPhone: tap the Share button, then Add to Home Screen.' : 'Use your browser menu and choose Install app or Add to Home screen.'}</p>
       ${installable ? `<div class="btns"><button class="btn" data-act="install">${ic('download', 18)}Install</button></div>` : ''}</div>
-    <div class="card group"><h2>This phone</h2><div class="kv"><span>App version</span><b>v16</b></div><div class="kv"><span>Items cached</span><b>${S.items.length}</b></div><div class="kv"><span>Movements cached</span><b>${S.history.length}</b></div>
+    <div class="card group"><h2>This phone</h2><div class="kv"><span>App version</span><b>v18</b></div><div class="kv"><span>Items cached</span><b>${S.items.length}</b></div><div class="kv"><span>Movements cached</span><b>${S.history.length}</b></div>
       <div class="btns"><button class="btn ghost" data-act="refresh">${ic('refresh', 18)}Reload from sheet</button></div></div>`;
 }
 
@@ -920,7 +922,7 @@ function renderSheet() {
       <div class="dsec">App</div>
       ${link('#/more', 'gear', 'Settings', 'Name, language, links, install')}
       ${S.installEvt && !isStandalone() ? `<button class="mi" data-act="install">${ic('download', 24)}<span><b>Install app</b><small>Opens full screen like a normal app</small></span></button>` : ''}
-      <div class="dfoot">${esc(APP_NAME)} &middot; v16</div>
+      <div class="dfoot">${esc(APP_NAME)} &middot; v18</div>
     </aside></div>`;
     return;
   }
