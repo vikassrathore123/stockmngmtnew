@@ -109,7 +109,8 @@
 
   /* ---------- Report (read back from the Cash Book) ---------- */
   const RANGES = [['today', 'Today'], ['7', '7 Days'], ['30', '30 Days'], ['month', 'This month']];
-  const dShort = (d) => new Date(d + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  const loc = () => { try { return JSON.parse(localStorage.getItem('artime.lang')) === 'hi' ? 'hi-IN' : 'en-GB'; } catch (e) { return 'en-GB'; } };
+  const dShort = (d) => new Date(d + 'T12:00:00').toLocaleDateString(loc(), { day: 'numeric', month: 'short' });
   const dRel = (d) => (d === today() ? 'Today' : dShort(d));
   function inRange(d) {
     const t = today();
@@ -199,7 +200,7 @@
       else if (a === 'pin') {
         const pin = ($('#mpin') || {}).value; if (!pin) return; M.msg = 'Checking…'; draw();
         post({ action: 'login', pin, dev }).then((j) => {
-          if (j.ok) { M.user = { name: j.name, bank: j.bank || '', admin: !!j.admin }; M.pin = pin; M.msg = ''; keep(); try { window.store.set('by', j.name); } catch (e) { /* ignore */ } sync(); }
+          if (j.ok) { M.user = { name: j.name, bank: j.bank || '', admin: !!j.admin }; M.pin = pin; M.msg = ''; keep(); try { window.store.set('by', j.name); } catch (e) { /* ignore */ } sync(); if (window.ARTIME_render) setTimeout(window.ARTIME_render, 0); }
           else M.msg = j.net ? 'No connection. Try again.' : (j.error || 'Wrong PIN');
           draw();
         });
@@ -220,8 +221,8 @@
       else if (a === 'del') { M.failed = M.failed.filter((x) => x.id !== b.dataset.id); keep(); ui(); }
       else if (a === 'logout') {
         const n = M.q.filter((e) => e.u === (M.user && M.user.name)).length;
-        if (n && !confirm(n + ' entries have not synced yet. They stay on this phone until you log in again. Log out?')) return;
-        M.user = null; M.pin = null; M.rep = null; s('rep', null); keep(); toast('Logged out'); draw();
+        if (n && !confirm((window.ARTIME_tr || ((x) => x))(n + ' entries have not synced yet. They stay on this phone until you log in again. Log out?'))) return;
+        M.user = null; M.pin = null; M.rep = null; s('rep', null); keep(); toast('Logged out'); draw(); if (window.ARTIME_render && !$('#money')) window.ARTIME_render();
       } else if (a === 'saveurl') {
         const v = ($('#murl') || {}).value.trim(); if (!/^https:\/\/script\.google\.com\//.test(v)) { toast('That does not look like a Google Apps Script link.', true); return; }
         post({ action: 'ping' }, v).then((j) => { if (j.ok) { s('url', v); toast('Connected ✓'); } else toast('Could not connect. Your old link is kept.', true); });
@@ -230,5 +231,5 @@
   };
   document.addEventListener('input', (ev) => { if (ev.target && ev.target.id === 'm-bank') { M.bank = ev.target.value; flip('#money [data-m="bank"]', M.bank); } });
   window.addEventListener('online', () => later(500));
-  window.Money = { act, boot: () => later(800), mount: () => { M.msg = ''; draw(); sync(); } };
+  window.Money = { act, boot: () => later(800), mount: () => { M.msg = ''; if (/[?&]v=report/.test(location.hash)) M.view = 'report'; draw(); sync(); } };
 })();
