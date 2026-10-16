@@ -1,16 +1,21 @@
-/* Payments module: own storage, own queue, own backend link. Loaded only when used, so it can never slow or break stock. */
+/* Payments module: a normal page inside the app (#/pay). Own storage, own queue, own backend link.
+   Loaded only when used, so it can never slow or break stock. Each entry is Cash or Bank. */
 (function () {
   'use strict';
   const K = 'artime.money.';
   const g = (k, d) => { try { const v = localStorage.getItem(K + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } };
   const s = (k, v) => { try { localStorage.setItem(K + k, JSON.stringify(v)); } catch (e) { /* full */ } };
   const esc = (x) => String(x == null ? '' : x).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const M = { user: g('user', null), q: g('q', []), failed: g('failed', []), hist: g('hist', []), msg: '', type: 'in', open: false };
+  const rs = (n) => '₹' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+  const M = { user: g('user', null), q: g('q', []), failed: g('failed', []), hist: g('hist', []), msg: '', type: 'in', mode: g('mode', 'cash') === 'bank' ? 'bank' : 'cash', bank: g('bank', '') };
   const dev = g('dev', null) || (() => { const d = 'd' + Math.random().toString(36).slice(2, 10); s('dev', d); return d; })();
   const url = () => g('url', '') || (window.APP_CONFIG && APP_CONFIG.moneyUrl) || '';
   const keep = () => { s('q', M.q); s('failed', M.failed); s('hist', M.hist); s('user', M.user); };
-  const today = () => new Date().toISOString().slice(0, 10);
+  const today = () => new Date().toLocaleDateString('en-CA');
   const $ = (q) => document.querySelector(q);
+  const ic = (n, z) => (window.ARTIME_ic ? window.ARTIME_ic(n, z || 22) : '');
+  const toast = (m, bad) => { try { if (window.ARTIME_toast) window.ARTIME_toast(m, bad); } catch (e) { /* ignore */ } };
+  const banks = () => String((M.user && M.user.bank) || '').split(/[,;/|]/).map((x) => x.trim()).filter((x) => x && x.toLowerCase() !== 'cash');
 
   async function post(body, u) {                       // never hangs, never throws
     const c = new AbortController(), t = setTimeout(() => c.abort(), 20000);
@@ -44,41 +49,78 @@
   }
 
   function ui() {                                           // refresh only the status list, never the form being typed in
-    const el = $('#m-list'); if (!el || !M.open) return;
+    const el = $('#m-list'); if (!el) return;
     try {
-      const mine = M.q.filter((e) => e.u === (M.user && M.user.name));
-      const row = (e, tag) => `<div class="row"><span>${e.type === 'in' ? '+' : '−'} ₹${esc(e.amount)} <small>${esc(e.party || e.note || '')}</small></span>${tag}</div>`;
-      el.innerHTML = `<div class="mc"><b>${mine.length ? mine.length + ' waiting to sync' : 'All synced ✓'}</b>
-        ${mine.map((e) => row(e, '<span class="pill w">waiting</span>')).join('')}
-        ${M.hist.slice(0, 8).map((e) => row(e, `<span class="pill">${e.held ? 'held' : 'saved'}</span>`)).join('')}
-        <button class="seg" style="all:unset;color:var(--green);font-weight:700" data-m="syncnow">${syncing ? 'Syncing…' : 'Sync now'}</button></div>
-        ${M.failed.length ? `<div class="mc"><b class="err">${M.failed.length} could not be saved</b>${M.failed.map((e) => `<div class="row"><span>₹${esc(e.amount)} <small class="err">${esc(e.why)}</small></span><span><button data-m="retry" data-id="${e.id}">Retry</button> <button data-m="del" data-id="${e.id}">Delete</button></span></div>`).join('')}</div>` : ''}`;
+      const me = M.user && M.user.name;
+      const mine = M.q.filter((e) => e.u === me);
+      const row = (e, tag) => `<div class="pmrow"><span class="pmi ${e.type}">${e.type === 'in' ? '+' : '−'}</span>
+        <div class="pmm"><b>${rs(e.amount)}</b><small>${esc(e.bank || 'Cash')}${e.party ? ' · ' + esc(e.party) : e.note ? ' · ' + esc(e.note) : ''}</small></div>${tag}</div>`;
+      el.innerHTML = `<div class="card group"><h2>${mine.length ? mine.length + ' waiting to sync' : 'All synced ✓'}</h2>
+        ${mine.map((e) => row(e, '<span class="pmtag w">waiting</span>')).join('')}
+        ${M.hist.slice(0, 8).map((e) => row(e, `<span class="pmtag">${e.held ? 'held' : 'saved'}</span>`)).join('')}
+        <div class="btns"><button class="btn ghost" data-m="syncnow">${syncing ? 'Syncing…' : 'Sync now'}</button></div></div>
+        ${M.failed.length ? `<div class="card group"><h2 class="r">${M.failed.length} could not be saved</h2>${M.failed.map((e) => `<div class="pmrow"><div class="pmm"><b>${rs(e.amount)}</b><small class="r">${esc(e.why)}</small></div><span><button class="btn ghost" data-m="retry" data-id="${esc(e.id)}">Retry</button> <button class="btn danger" data-m="del" data-id="${esc(e.id)}">Delete</button></span></div>`).join('')}</div>` : ''}`;
     } catch (e) { /* a display problem must never stop saving */ }
   }
 
+  const say = (m) => { M.msg = m; const el = $('#m-msg'); if (el) el.textContent = m; };
+
   function draw() {
-    let el = $('#money'); if (!el) { el = document.createElement('div'); el.id = 'money'; document.body.appendChild(el); }
-    M.open = true;
+    const el = $('#money'); if (!el) return;
     try {
-      if (!url()) { el.innerHTML = '<h2>Payments<button class="x" data-m="close">×</button></h2><div class="mc">No payments sheet link yet.<br>Add it in Settings → Payments.</div>'; return; }
+      if (!url()) { el.innerHTML = '<div class="card group"><h2>No payments sheet link yet</h2><p>Add the Payments Google Sheet link in Settings.</p><div class="btns"><a class="btn" href="#/more">Open Settings</a></div></div>'; return; }
       if (!M.user) {
-        el.innerHTML = `<h2>Payments<button class="x" data-m="close">×</button></h2><div class="mc"><b>Enter your PIN</b><small>Only the first time on this phone.</small><input id="mpin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN"><div class="err">${esc(M.msg)}</div><button class="go" data-m="pin">Continue</button></div>`;
+        el.innerHTML = `<div class="form pay"><div class="card group"><h2>Enter your PIN</h2><p>Only the first time on this phone.</p>
+          <div class="field"><input id="mpin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN"></div>
+          <div class="hint bad">${esc(M.msg)}</div><div class="btns"><button class="btn" style="background:var(--green)" data-m="pin">Continue</button></div></div></div>`;
         return;
       }
-      el.innerHTML = `<h2>${esc(M.user.name)}<button class="x" data-m="close">×</button></h2>
-        <div class="mc"><div class="tg"><button class="${M.type === 'in' ? 'on in' : ''}" data-m="type" data-v="in">Received</button><button class="${M.type === 'out' ? 'on out' : ''}" data-m="type" data-v="out">Paid</button></div>
-        <input id="m-amt" inputmode="decimal" placeholder="Amount ₹"><input id="m-party" placeholder="Party / name"><input id="m-bank" placeholder="Bank / cash" value="${esc(M.user.bank)}"><input id="m-note" placeholder="Note (optional)"><input id="m-date" type="date" value="${today()}">
-        <div class="err">${esc(M.msg)}</div><button class="go" data-m="save">Save entry</button></div><div id="m-list"></div>`;
+      const bl = banks();
+      if (!M.bank && bl[0]) M.bank = bl[0];
+      const t = (v) => (M.type === v ? 'on' : ''), m = (v) => (M.mode === v ? 'on' : '');
+      el.innerHTML = `<div class="form pay">
+        <div class="pmwho"><span>Logged in as <b>${esc(M.user.name)}</b></span><button data-m="logout">Log out</button></div>
+        <div class="tabs"><button class="tab rcv ${t('in')}" data-m="type" data-v="in">${ic('down')}Received</button><button class="tab pd ${t('out')}" data-m="type" data-v="out">${ic('up')}Paid</button></div>
+        <label class="fl" for="m-amt">Amount<i>*</i></label>
+        <div class="field"><b class="rup">₹</b><input id="m-amt" inputmode="decimal" placeholder="0" autocomplete="off"></div>
+        <div class="fl">Cash or bank<i>*</i></div>
+        <div class="tabs"><button class="tab md ${m('cash')}" data-m="mode" data-v="cash">${ic('cash')}Cash</button><button class="tab md ${m('bank')}" data-m="mode" data-v="bank">${ic('bank')}Bank</button></div>
+        <div id="m-bankbox" style="display:${M.mode === 'bank' ? 'block' : 'none'}">
+          <label class="fl" for="m-bank">Which bank<i>*</i></label>
+          ${bl.length ? `<div class="sizes">${bl.map((b) => `<button class="size ${b === M.bank ? 'on' : ''}" data-m="bank" data-v="${esc(b)}">${esc(b)}</button>`).join('')}</div>` : ''}
+          <div class="field"${bl.length ? ' style="margin-top:8px"' : ''}>${ic('bank', 20)}<input id="m-bank" placeholder="Bank name" value="${esc(M.bank)}" autocomplete="off"></div>
+        </div>
+        <label class="fl" for="m-party">Party / name</label>
+        <div class="field">${ic('truck', 20)}<input id="m-party" placeholder="Who paid or who was paid" autocomplete="off"></div>
+        <label class="fl" for="m-note">Note <small>(optional)</small></label>
+        <div class="field">${ic('pencil', 20)}<input id="m-note" placeholder="Add note..." autocomplete="off"></div>
+        <label class="fl" for="m-date">Date</label>
+        <div class="field">${ic('cal', 20)}<input id="m-date" type="date" value="${today()}"></div>
+        <div class="hint bad" id="m-msg">${esc(M.msg)}</div>
+        <button class="submit ${M.type === 'out' ? 'out' : ''}" id="m-submit" data-m="save"><span id="m-sl">${M.type === 'in' ? 'Save Received' : 'Save Paid'}</span></button>
+      </div><div id="m-list"></div>`;
       ui();
-    } catch (e) { el.innerHTML = '<div class="mc err">Payments had a problem. <button data-m="open">Retry</button> <button data-m="close">Close</button></div>'; }
+    } catch (e) { el.innerHTML = '<div class="card group"><h2 class="r">Payments had a problem</h2><div class="btns"><button class="btn" data-m="mount">Retry</button></div></div>'; }
   }
+
+  function flip(sel, val) { document.querySelectorAll(sel).forEach((b) => b.classList.toggle('on', b.dataset.v === val)); }
 
   const act = (a, b) => {
     try {
-      if (a === 'open') { M.msg = ''; draw(); sync(); }
-      else if (a === 'close') { M.open = false; const el = $('#money'); if (el) el.remove(); }
-      else if (a === 'type') { M.type = b.dataset.v; draw(); }
-      else if (a === 'syncnow') sync();
+      if (a === 'open') { location.hash = '#/pay'; }
+      else if (a === 'mount') { M.msg = ''; draw(); sync(); }
+      else if (a === 'close') { location.hash = '#/home'; }
+      else if (a === 'type') {                              // switch in place, so typed text is never lost
+        M.type = b.dataset.v; flip('#money [data-m="type"]', M.type);
+        const sb = $('#m-submit'), sl = $('#m-sl');
+        if (sb) sb.classList.toggle('out', M.type === 'out'); if (sl) sl.textContent = M.type === 'in' ? 'Save Received' : 'Save Paid';
+      } else if (a === 'mode') {
+        M.mode = b.dataset.v; s('mode', M.mode); flip('#money [data-m="mode"]', M.mode);
+        const bx = $('#m-bankbox'); if (bx) bx.style.display = M.mode === 'bank' ? 'block' : 'none';
+        say('');
+      } else if (a === 'bank') {
+        M.bank = b.dataset.v; s('bank', M.bank); const i = $('#m-bank'); if (i) i.value = M.bank; flip('#money [data-m="bank"]', M.bank);
+      } else if (a === 'syncnow') sync();
       else if (a === 'pin') {
         const pin = ($('#mpin') || {}).value; if (!pin) return; M.msg = 'Checking…'; draw();
         post({ action: 'login', pin, dev }).then((j) => {
@@ -87,22 +129,31 @@
           draw();
         });
       } else if (a === 'save') {
-        const amt = parseFloat(($('#m-amt') || {}).value);
-        if (!(amt > 0)) { M.msg = 'Enter an amount'; draw(); return; }
-        M.q.push({ id: 'M' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), u: M.user.name, type: M.type, amount: amt, party: $('#m-party').value.trim(), bank: $('#m-bank').value.trim(), note: $('#m-note').value.trim(), date: $('#m-date').value || today() });
-        M.msg = ''; keep(); draw(); sync();                  // saved on the phone first, uploaded in the background
+        const amt = parseFloat(String(($('#m-amt') || {}).value || '').replace(/,/g, ''));
+        if (!(amt > 0)) { say('Enter an amount'); return; }
+        let bank = 'Cash';
+        if (M.mode === 'bank') {
+          bank = String(($('#m-bank') || {}).value || '').trim();
+          if (!bank) { say('Choose or type the bank'); return; }
+          M.bank = bank; s('bank', bank);
+        }
+        const val = (id) => String(($(id) || {}).value || '').trim();
+        M.q.push({ id: 'M' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), u: M.user.name, type: M.type, mode: M.mode, amount: amt, party: val('#m-party'), bank, note: val('#m-note'), date: val('#m-date') || today() });
+        ['#m-amt', '#m-party', '#m-note'].forEach((id) => { const i = $(id); if (i) i.value = ''; });
+        say(''); keep(); ui(); toast('Saved on this phone'); sync();          // saved on the phone first, uploaded in the background
       } else if (a === 'retry') { const e = M.failed.find((x) => x.id === b.dataset.id); if (e) { M.failed = M.failed.filter((x) => x !== e); delete e.why; M.q.push(e); keep(); ui(); sync(); } }
       else if (a === 'del') { M.failed = M.failed.filter((x) => x.id !== b.dataset.id); keep(); ui(); }
       else if (a === 'logout') {
         const n = M.q.filter((e) => e.u === (M.user && M.user.name)).length;
         if (n && !confirm(n + ' entries have not synced yet. They stay on this phone until you log in again. Log out?')) return;
-        M.user = null; keep(); alert('Logged out.'); if (M.open) draw();
+        M.user = null; keep(); toast('Logged out'); draw();
       } else if (a === 'saveurl') {
-        const v = ($('#murl') || {}).value.trim(); if (!/^https:\/\/script\.google\.com\//.test(v)) { alert('That does not look like a Google Apps Script link.'); return; }
-        post({ action: 'ping' }, v).then((j) => { if (j.ok) { s('url', v); alert('Connected ✓'); } else alert('Could not connect. Your old link is kept.'); });
+        const v = ($('#murl') || {}).value.trim(); if (!/^https:\/\/script\.google\.com\//.test(v)) { toast('That does not look like a Google Apps Script link.', true); return; }
+        post({ action: 'ping' }, v).then((j) => { if (j.ok) { s('url', v); toast('Connected ✓'); } else toast('Could not connect. Your old link is kept.', true); });
       }
-    } catch (e) { alert('Something went wrong in Payments. Your saved entries are safe.'); }
+    } catch (e) { toast('Something went wrong in Payments. Your saved entries are safe.', true); }
   };
+  document.addEventListener('input', (ev) => { if (ev.target && ev.target.id === 'm-bank') { M.bank = ev.target.value; flip('#money [data-m="bank"]', M.bank); } });
   window.addEventListener('online', () => later(500));
-  window.Money = { act, boot: () => later(800) };
+  window.Money = { act, boot: () => later(800), mount: () => { M.msg = ''; draw(); sync(); } };
 })();
