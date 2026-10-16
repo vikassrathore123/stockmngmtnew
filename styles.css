@@ -483,3 +483,17 @@ a { color: inherit; text-decoration: none; }
 .drawer .dfoot { margin: 18px 16px 8px; color: var(--mute); font-size: 13px; text-align: center; }
 .drawer button.mi { width: 100%; text-align: left; }
 :lang(hi) body { line-height: 1.5; }
+
+/* ---- bottom bar: big middle button + small button on the far right ---- */
+#nav .n.mini { gap: 2px; padding: 2px 0 4px; font-weight: 600; }
+#nav .n.mini.pm { color: var(--green); } #nav .n.mini.st { color: var(--blue); }
+#nav .mfab { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-style: normal; border: 3px solid #fff; }
+#nav .mfab.g { background: var(--green); box-shadow: 0 4px 12px rgba(22,163,74,.38); }
+#nav .mfab.b { background: var(--blue); box-shadow: 0 4px 12px rgba(31,95,230,.38); }
+#nav .n.mini.on { font-weight: 700; }
+#nav .n.mini:active .mfab { transform: scale(.94); }
+.card.payalert { display: flex; align-items: center; gap: 14px; margin: 12px 16px 0; padding: 14px 16px; color: var(--ink); }
+.card.payalert > span { flex: 1; min-width: 0; } .card.payalert b { display: block; } .card.payalert small { color: var(--mute); }
+#paydash { padding: 0 16px; } #paydash .card, #paydash .acts { margin-left: 0; margin-right: 0; }
+#paydash .sec-h { display: flex; justify-content: space-between; align-items: baseline; }
+#paydash .sec-h a { color: var(--blue); font-weight: 600; font-size: 14px; }
