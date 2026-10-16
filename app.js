@@ -32,8 +32,8 @@ const iso = (d) => d.toLocaleDateString('en-CA');
 const today = () => iso(new Date());
 const ago = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return iso(d); };
 const parseISO = (s) => { const [y, m, d] = String(s).split('-').map(Number); return new Date(y, (m || 1) - 1, d || 1); };
-const dLong = (s) => parseISO(s).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-const dShort = (s) => parseISO(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+const dLong = (s) => parseISO(s).toLocaleDateString(loc(), { day: '2-digit', month: 'short', year: 'numeric' });
+const dShort = (s) => parseISO(s).toLocaleDateString(loc(), { day: 'numeric', month: 'short' });
 const dRel = (s) => (s === today() ? 'Today' : s === ago(1) ? 'Yesterday' : dShort(s));
 const sizeLabel = (s) => (!s || s === 'n/a' ? '' : String(s).replace(/\s*in$/i, ' Inch'));
 const unitLabel = (u) => cap(u || 'pcs');
@@ -44,6 +44,145 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem('artime.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem('artime.' + k, JSON.stringify(v)); } catch (e) { /* storage full or blocked */ } }
 };
+
+/* ================= language (English / Hindi) =================
+   The screens are written in English. When Hindi is chosen, every piece of text on screen is swapped
+   using this list, so no screen can be forgotten and the English version never changes. */
+const lang = () => (store.get('lang', 'en') === 'hi' ? 'hi' : 'en');
+const loc = () => (lang() === 'hi' ? 'hi-IN' : 'en-GB');
+const HI = {
+  'Home': 'होम', 'Items': 'आइटम', 'Stock': 'स्टॉक', 'Payments': 'भुगतान', 'Reports': 'रिपोर्ट', 'Report': 'रिपोर्ट', 'Settings': 'सेटिंग्स',
+  'Categories': 'श्रेणियाँ', 'Back': 'वापस', 'Menu': 'मेन्यू', 'Search': 'खोजें', 'Stock Management': 'स्टॉक प्रबंधन',
+  'Total Items': 'कुल आइटम', 'Total Stock': 'कुल स्टॉक', 'Out of Stock': 'स्टॉक खत्म', 'Reorder Soon': 'जल्द ऑर्डर करें', 'In Stock': 'स्टॉक में', 'No Entries': 'कोई एंट्री नहीं', 'Reorder': 'ऑर्डर करें',
+  'View and manage all items': 'सभी आइटम देखें और संभालें', 'Manage item categories': 'आइटम की श्रेणियाँ संभालें',
+  'Low Stock Alerts': 'कम स्टॉक अलर्ट', 'View All': 'सभी देखें', 'Recent Stock Activity': 'हाल की स्टॉक गतिविधि', 'Stock Overview': 'स्टॉक सारांश',
+  'Last 7 Days': 'पिछले 7 दिन', 'Last 14 Days': 'पिछले 14 दिन', 'Last 30 Days': 'पिछले 30 दिन', 'Last 90 Days': 'पिछले 90 दिन',
+  'Nothing is running low': 'कुछ भी कम नहीं है', 'Items show here when they reach their reorder level.': 'आइटम रीऑर्डर स्तर पर पहुँचते ही यहाँ दिखेंगे।',
+  'No movements yet': 'अभी कोई लेन-देन नहीं', 'Add your first Stock In or Stock Out.': 'अपना पहला स्टॉक इन या स्टॉक आउट जोड़ें।',
+  'No Google Sheets link yet.': 'अभी Google Sheets लिंक नहीं है।', 'Add it in More': 'सेटिंग्स में जोड़ें',
+  'Loading your stock...': 'आपका स्टॉक लोड हो रहा है...', 'One moment.': 'एक पल।', 'No stock data yet': 'अभी स्टॉक डेटा नहीं',
+  'Tap the sync line above to load from Google Sheets.': 'Google Sheets से लोड करने के लिए ऊपर की सिंक लाइन दबाएँ।',
+  'Install ARTIME Stock': 'ARTIME Stock इंस्टॉल करें', 'Opens full screen like a normal app': 'सामान्य ऐप की तरह फुल स्क्रीन में खुलेगा', 'Install': 'इंस्टॉल करें',
+  'Saving to Google Sheets...': 'Google Sheets में सेव हो रहा है...', 'Updating...': 'अपडेट हो रहा है...', 'Not synced yet. Tap to load': 'अभी सिंक नहीं हुआ। लोड करने के लिए दबाएँ',
+  'Could not reach Google Sheets. Check the link in More.': 'Google Sheets तक नहीं पहुँच सके। सेटिंग्स में लिंक जाँचें।', 'You are offline.': 'आप ऑफ़लाइन हैं।',
+  'The Google Sheets link did not answer correctly. Check it is deployed for "Anyone".': 'Google Sheets लिंक ने सही जवाब नहीं दिया। जाँचें कि वह "Anyone" के लिए डिप्लॉय है।',
+  'Dial Out': 'डायल आउट', 'Stock In': 'स्टॉक इन', 'Stock Out': 'स्टॉक आउट', 'Waiting to sync': 'सिंक के लिए रुका है', 'Today': 'आज', 'Yesterday': 'कल', 'Total In': 'कुल इन', 'Total Out': 'कुल आउट',
+  'Search item or code': 'आइटम या कोड खोजें', 'All': 'सभी', 'Packaging Items': 'पैकेजिंग आइटम', 'Clock Items': 'घड़ी के आइटम', 'Any status': 'कोई भी स्थिति', 'Needs attention': 'ध्यान चाहिए',
+  'No items loaded': 'कोई आइटम लोड नहीं', 'Open Home and tap the sync line.': 'होम खोलें और सिंक लाइन दबाएँ।', 'No items match': 'कोई आइटम मेल नहीं खाता', 'Try a different search or filter.': 'दूसरी खोज या फ़िल्टर आज़माएँ।',
+  'All good': 'सब ठीक है', 'Stock movement over time': 'समय के साथ स्टॉक की आवाजाही', 'Most used': 'सबसे ज़्यादा इस्तेमाल', 'No stock out in this period.': 'इस अवधि में कोई स्टॉक आउट नहीं।',
+  'All movements': 'सभी लेन-देन', 'No movements': 'कोई लेन-देन नहीं', 'Nothing recorded in this period.': 'इस अवधि में कुछ दर्ज नहीं हुआ।',
+  'Item': 'आइटम', 'Size': 'साइज़', 'Type': 'प्रकार', 'Quantity': 'मात्रा', 'Date': 'तारीख', 'Supplier': 'सप्लायर', 'Used for': 'किसके लिए', 'Reference No.': 'रेफ़रेंस नंबर', 'Notes': 'नोट', 'Note': 'नोट', '(optional)': '(वैकल्पिक)',
+  'Supplier name': 'सप्लायर का नाम', 'Order, Sample...': 'ऑर्डर, सैंपल...', 'Invoice / GRN No.': 'इनवॉइस / GRN नंबर', 'Voucher / Order No.': 'वाउचर / ऑर्डर नंबर', 'Add notes...': 'नोट लिखें...',
+  'Add Stock In': 'स्टॉक इन जोड़ें', 'Remove Stock Out': 'स्टॉक आउट करें', 'Record Dial Out': 'डायल आउट दर्ज करें', 'Dial size': 'डायल साइज़', 'How many dials': 'कितने डायल', 'Production': 'प्रोडक्शन',
+  'Make dials - the parts go out together': 'डायल बनाएँ - पार्ट्स साथ में निकलते हैं', 'Add incoming stock to inventory': 'आया हुआ स्टॉक जोड़ें', 'Remove stock from inventory': 'स्टॉक बाहर निकालें',
+  'Add incoming stock': 'आया हुआ स्टॉक जोड़ें', 'Record outgoing stock': 'बाहर गया स्टॉक दर्ज करें', 'Make dials - all parts go out together': 'डायल बनाएँ - सभी पार्ट्स साथ निकलते हैं',
+  'Current Stock': 'मौजूदा स्टॉक', 'Reorder Level': 'रीऑर्डर स्तर', 'Unit': 'यूनिट', 'No matching item.': 'कोई मेल खाता आइटम नहीं।', 'No items loaded yet. Go back and sync first.': 'अभी कोई आइटम लोड नहीं। वापस जाकर पहले सिंक करें।',
+  'Choose an item.': 'आइटम चुनें।', 'Enter a quantity above 0.': '0 से ज़्यादा मात्रा डालें।', 'This item is out of stock.': 'यह आइटम स्टॉक में नहीं है।',
+  'No dial items loaded yet. Go back and sync first.': 'अभी कोई डायल आइटम लोड नहीं। वापस जाकर पहले सिंक करें।', 'Choose a dial size.': 'डायल साइज़ चुनें।', 'Tick at least one part.': 'कम से कम एक पार्ट चुनें।',
+  'Select all': 'सभी चुनें', 'Clear all': 'सभी हटाएँ', 'Not used': 'इस्तेमाल नहीं', 'Pcs': 'नग', 'Kg': 'किलो', 'Ltr': 'लीटर', 'Mtr': 'मीटर',
+  'Clock Hands': 'घड़ी की सुइयाँ', 'PVC Ring': 'PVC रिंग', 'PVC Paper': 'PVC पेपर', 'Glass': 'काँच', 'Iron Ring': 'आयरन रिंग', 'Machine': 'मशीन', 'Iron Plate': 'आयरन प्लेट', 'Tikkla': 'टिक्कला',
+  'Added to Stock In': 'स्टॉक इन में जुड़ गया', 'Added to Stock Out': 'स्टॉक आउट में जुड़ गया', 'Dial Out recorded': 'डायल आउट दर्ज हुआ', 'Not added': 'जुड़ा नहीं',
+  'Saving to Google Sheets in background': 'Google Sheets में पीछे सेव हो रहा है', 'Saved on this phone. It will sync when you are online.': 'इस फ़ोन में सेव हुआ। ऑनलाइन होते ही सिंक हो जाएगा।',
+  'All parts for this size were taken out': 'इस साइज़ के सभी पार्ट्स निकाले गए', 'OK': 'ठीक है', 'New entry': 'नई एंट्री', 'Recent movements': 'हाल के लेन-देन', 'No movements for this item yet.': 'इस आइटम का अभी कोई लेन-देन नहीं।',
+  'Message': 'संदेश', 'Send on WhatsApp': 'WhatsApp पर भेजें', 'Cancel': 'रद्द करें', 'To:': 'किसको:', 'just now': 'अभी',
+  'Reading supplier from the sheet...': 'शीट से सप्लायर पढ़ रहे हैं...', 'No WhatsApp number for this item in the Reorder Setup sheet.': 'Reorder Setup शीट में इस आइटम का WhatsApp नंबर नहीं है।',
+  'This code is not filled in the Reorder Setup sheet.': 'यह कोड Reorder Setup शीट में भरा नहीं है।', 'Enter a quantity': 'मात्रा डालें', 'Reorder had a problem. Nothing was lost.': 'ऑर्डर में दिक्कत आई। कुछ नहीं खोया।',
+  'Link saved': 'लिंक सेव हुआ', 'App installed': 'ऐप इंस्टॉल हो गया', 'That does not look like a Web app link ending in /exec.': 'यह /exec पर खत्म होने वाला Web app लिंक नहीं लगता।',
+  /* side menu + settings */
+  'Admin · Logged in to Payments': 'एडमिन · भुगतान में लॉगिन', 'Staff · Logged in to Payments': 'स्टाफ · भुगतान में लॉगिन', 'Not logged in to Payments': 'भुगतान में लॉगिन नहीं',
+  'Add your name': 'अपना नाम जोड़ें', 'Today at a glance': 'आज एक नज़र में', 'In today': 'आज इन', 'Out today': 'आज आउट', 'To reorder': 'ऑर्डर करना है',
+  'Tools': 'टूल्स', 'Reorder List': 'ऑर्डर सूची', 'Nothing to order': 'ऑर्डर करने को कुछ नहीं', 'Items that are low or out of stock': 'जो आइटम कम या खत्म हैं',
+  'Make dials, choose the parts': 'डायल बनाएँ, पार्ट्स चुनें', 'Payments Report': 'भुगतान रिपोर्ट', 'Cash and bank totals': 'नकद और बैंक का हिसाब',
+  'Language': 'भाषा', 'App': 'ऐप', 'Name, language, links, install': 'नाम, भाषा, लिंक, इंस्टॉल', 'Sync now': 'अभी सिंक करें', 'No supplier set': 'सप्लायर तय नहीं',
+  'Preferences': 'पसंद', 'Choose the language of the app.': 'ऐप की भाषा चुनें।', 'Your name': 'आपका नाम',
+  'Taken automatically from your Payments login. Log out of Payments to change it.': 'भुगतान लॉगिन से अपने-आप लिया गया है। बदलने के लिए भुगतान से लॉग आउट करें।',
+  'Saved on every stock entry and reorder you make. Log in to Payments and it fills in by itself.': 'हर स्टॉक एंट्री और ऑर्डर पर सेव होता है। भुगतान में लॉगिन करते ही अपने-आप भर जाएगा।',
+  'Main button': 'मुख्य बटन', 'Pick what you use most. It sits in the middle of the bar.': 'जो सबसे ज़्यादा इस्तेमाल करें वह चुनें। यह बार के बीच में रहेगा।',
+  'Logged in as': 'लॉगिन:', 'Not logged in': 'लॉगिन नहीं', 'Sheet connected': 'शीट जुड़ी है', 'No sheet link yet': 'अभी शीट लिंक नहीं', 'Payments Google Sheet link': 'भुगतान Google Sheet का लिंक',
+  'Test and save link': 'लिंक जाँचकर सेव करें', 'Log out': 'लॉग आउट', 'Stock sheet': 'स्टॉक शीट', 'Google Sheet connection': 'Google Sheet कनेक्शन', 'Paste the Web app link that ends with /exec.': '/exec पर खत्म होने वाला Web app लिंक यहाँ चिपकाएँ।',
+  'Save and sync': 'सेव करके सिंक करें', 'Use default link': 'डिफ़ॉल्ट लिंक इस्तेमाल करें', 'Last sync': 'आख़िरी सिंक', 'Never': 'कभी नहीं',
+  'Data on this phone': 'इस फ़ोन का डेटा', 'Saved on this phone. They are sent to the sheet as soon as you are online.': 'इस फ़ोन में सेव हैं। ऑनलाइन होते ही शीट में भेज दिए जाएँगे।', 'Everything is saved to the sheet.': 'सब कुछ शीट में सेव है।',
+  'Discard': 'हटाएँ', 'Not saved': 'सेव नहीं हुए', 'The sheet rejected these entries. Fix the cause, then enter them again.': 'शीट ने ये एंट्री मना कर दीं। कारण ठीक करके दोबारा डालें।',
+  'Install app': 'ऐप इंस्टॉल करें', 'Installed. You are using the app version.': 'इंस्टॉल है। आप ऐप वर्ज़न इस्तेमाल कर रहे हैं।', 'Add ARTIME Stock to your home screen so it opens like a normal app.': 'ARTIME Stock को होम स्क्रीन पर जोड़ें ताकि यह सामान्य ऐप की तरह खुले।',
+  'On iPhone: tap the Share button, then Add to Home Screen.': 'iPhone पर: Share बटन दबाएँ, फिर Add to Home Screen।', 'Use your browser menu and choose Install app or Add to Home screen.': 'ब्राउज़र मेन्यू में Install app या Add to Home screen चुनें।',
+  'This phone': 'यह फ़ोन', 'Items cached': 'सेव किए आइटम', 'Movements cached': 'सेव किए लेन-देन', 'Reload from sheet': 'शीट से दोबारा लोड करें', 'App version': 'ऐप वर्ज़न', 'About': 'जानकारी',
+  /* payments */
+  'Payments had a problem': 'भुगतान में दिक्कत आई', 'Retry': 'फिर कोशिश करें', 'No payments sheet link yet': 'अभी भुगतान शीट का लिंक नहीं', 'Add the Payments Google Sheet link in Settings.': 'सेटिंग्स में भुगतान Google Sheet का लिंक जोड़ें।',
+  'Open Settings': 'सेटिंग्स खोलें', 'Enter your PIN': 'अपना PIN डालें', 'Only the first time on this phone.': 'इस फ़ोन पर सिर्फ़ पहली बार।', 'PIN': 'PIN', 'Continue': 'आगे बढ़ें',
+  'Cash and bank entries': 'नकद और बैंक की एंट्री', 'Received': 'मिला', 'Paid': 'दिया', 'Amount': 'राशि', 'Cash or bank': 'नकद या बैंक', 'Cash': 'नकद', 'Bank': 'बैंक', 'Which bank': 'कौन सा बैंक', 'Bank name': 'बैंक का नाम',
+  'Party / name': 'पार्टी / नाम', 'Who paid or who was paid': 'किसने दिया या किसे दिया', 'Add note...': 'नोट लिखें...', 'Save Received': 'मिला हुआ सेव करें', 'Save Paid': 'दिया हुआ सेव करें',
+  'All synced ✓': 'सब सिंक हो गया ✓', 'waiting': 'रुका है', 'held': 'होल्ड पर', 'saved': 'सेव', 'Syncing…': 'सिंक हो रहा है…', 'Delete': 'मिटाएँ',
+  '7 Days': '7 दिन', '30 Days': '30 दिन', 'This month': 'इस महीने', 'Enter your PIN to see reports': 'रिपोर्ट देखने के लिए PIN डालें', 'Asked once, so the report can be read safely from the sheet.': 'सिर्फ़ एक बार पूछा जाता है ताकि रिपोर्ट शीट से सुरक्षित पढ़ी जा सके।',
+  'Show report': 'रिपोर्ट दिखाएँ', 'Refresh': 'रिफ़्रेश', 'Loading…': 'लोड हो रहा है…', 'Loading report…': 'रिपोर्ट लोड हो रही है…', 'No report yet': 'अभी कोई रिपोर्ट नहीं', 'Tap Refresh to load it from the sheet.': 'शीट से लोड करने के लिए Refresh दबाएँ।',
+  'Balance': 'बैलेंस', 'Cash and banks': 'नकद और बैंक', 'Received and paid in this period. Right side = balance now (all time).': 'इस अवधि में मिला और दिया। दाईं ओर = अभी का बैलेंस (कुल)।', 'Balance now': 'अभी का बैलेंस',
+  'Entries': 'एंट्री', 'No entries': 'कोई एंट्री नहीं', 'Report could not be shown': 'रिपोर्ट नहीं दिख सकी', "Everyone's entries": 'सभी की एंट्री', 'Your entries': 'आपकी एंट्री',
+  'Saved on this phone': 'इस फ़ोन में सेव हुआ', 'Logged out': 'लॉग आउट हो गया', 'Enter an amount': 'राशि डालें', 'Choose or type the bank': 'बैंक चुनें या लिखें', 'Checking…': 'जाँच हो रही है…',
+  'No connection. Try again.': 'कनेक्शन नहीं है। फिर कोशिश करें।', 'Wrong PIN': 'गलत PIN', 'Connected ✓': 'जुड़ गया ✓', 'Could not connect. Your old link is kept.': 'जुड़ नहीं सके। पुराना लिंक रखा गया है।',
+  'That does not look like a Google Apps Script link.': 'यह Google Apps Script का लिंक नहीं लगता।', 'No connection. Showing the last saved report.': 'कनेक्शन नहीं है। आख़िरी सेव की हुई रिपोर्ट दिख रही है।',
+  'Something went wrong in Payments. Your saved entries are safe.': 'भुगतान में कुछ गड़बड़ हुई। आपकी सेव एंट्री सुरक्षित हैं।', 'That PIN belongs to someone else.': 'यह PIN किसी और का है।',
+  'Too many wrong PINs. Wait 10 minutes.': 'बहुत ज़्यादा गलत PIN। 10 मिनट रुकें।', 'This user is switched off.': 'यह यूज़र बंद है।'
+};
+const trAge = (s) => s.replace(/^just now$/, 'अभी').replace(/^(\d+) min ago$/, '$1 मिनट पहले').replace(/^(\d+) h ago$/, '$1 घंटे पहले');
+const HI_RULES = [
+  [/^(Today|Yesterday)(, .*)?$/, (m) => T(m[1]) + (m[2] || '')],
+  [/^(\d+) min ago$/, (m) => m[1] + ' मिनट पहले'],
+  [/^(\d+) h ago$/, (m) => m[1] + ' घंटे पहले'],
+  [/^Logged in as (.+)$/, (m) => 'लॉगिन: ' + m[1]],
+  [/^(.+?) - (\S+) Inch$/, (m) => T(m[1]) + ' - ' + m[2] + ' इंच'],
+  [/^(\S+) Inch$/, (m) => m[1] + ' इंच'],
+  [/^(\d+) (?:entry|entries) waiting to sync\. Tap to retry$/, (m) => m[1] + ' एंट्री सिंक के लिए रुकी हैं। दोबारा कोशिश के लिए दबाएँ'],
+  [/^(.+) Tap to retry$/, (m) => T(m[1]) + ' दोबारा कोशिश के लिए दबाएँ'],
+  [/^Synced (.+)$/, (m) => 'सिंक हुआ: ' + trAge(m[1])],
+  [/^(\d+) items?$/, (m) => m[1] + ' आइटम'],
+  [/^(\d+) items, (.+) in stock$/, (m) => m[1] + ' आइटम, ' + m[2] + ' स्टॉक में'],
+  [/^(\d+) need attention$/, (m) => m[1] + ' पर ध्यान चाहिए'],
+  [/^(\d+) items to order$/, (m) => m[1] + ' आइटम ऑर्डर करने हैं'],
+  [/^(.*) - without (.*)$/, (m) => m[1] + ' - बिना ' + m[2]],
+  [/^Without (.+)$/, (m) => 'बिना ' + m[1]],
+  [/^Reordered (.+) · (.+)$/, (m) => 'ऑर्डर किया ' + m[1] + ' · ' + T(m[2])],
+  [/^Reorder (.+)$/, (m) => 'ऑर्डर करें: ' + m[1]],
+  [/^(.+) · Stock (.+) · Min (.+)$/, (m) => m[1] + ' · स्टॉक ' + U(m[2]) + ' · न्यूनतम ' + U(m[3])],
+  [/^Max available: (.+)$/, (m) => 'ज़्यादा से ज़्यादा उपलब्ध: ' + T(m[1])],
+  [/^Only (.+) available\.$/, (m) => 'सिर्फ़ ' + T(m[1]) + ' उपलब्ध।'],
+  [/^Stock now (.+)$/, (m) => 'अभी स्टॉक ' + T(m[1])],
+  [/^Tick the parts that go out for (\S+) dials?$/, (m) => m[1] + ' डायल के लिए जो पार्ट्स निकलेंगे उन्हें चुनें'],
+  [/^Not enough (.+)\. Stock will go below zero\.$/, (m) => m[1] + ' पूरा नहीं है। स्टॉक शून्य से नीचे जाएगा।'],
+  [/^Stock allows up to (\S+) dials? \(limited by (.+)\)\.$/, (m) => 'स्टॉक से ज़्यादा से ज़्यादा ' + m[1] + ' डायल बन सकते हैं (' + T(m[2]) + ' की वजह से)।'],
+  [/^The sheet rejected it: (.+)$/, (m) => 'शीट ने मना कर दिया: ' + m[1]],
+  [/^Saved on this phone\. (.+)$/, (m) => 'इस फ़ोन में सेव हुआ। ' + T(m[1])],
+  [/^(.*?)\s*You can still pick a contact in WhatsApp\.$/, (m) => (m[1] ? T(m[1]) + ' ' : '') + 'फिर भी आप WhatsApp में कोई संपर्क चुन सकते हैं।'],
+  [/^(\d+) waiting to sync$/, (m) => m[1] + ' सिंक के लिए रुकी हैं'],
+  [/^(\d+) could not be saved$/, (m) => m[1] + ' सेव नहीं हो सकीं'],
+  [/^(\d+) (?:entry is|entries are) still waiting to sync and not in this report yet\.$/, (m) => m[1] + ' एंट्री अभी सिंक के लिए रुकी हैं और इस रिपोर्ट में नहीं हैं।'],
+  [/^(Everyone's entries|Your entries) · updated (.+)$/, (m) => T(m[1]) + ' · अपडेट: ' + m[2]],
+  [/^(\d+) entries have not synced yet\. They stay on this phone until you log in again\. Log out\?$/, (m) => m[1] + ' एंट्री सिंक नहीं हुई हैं। दोबारा लॉगिन तक वे इसी फ़ोन में रहेंगी। लॉग आउट करें?']
+];
+const U = (s) => s.replace(/\b(Pcs|Kg|Ltr|Mtr)\b/g, (x) => HI[x]);
+function T(s) {
+  s = String(s); const t = s.trim(); if (!t) return s;
+  let out = HI[t];
+  if (out === undefined) { for (let i = 0; i < HI_RULES.length; i++) { const m = HI_RULES[i][0].exec(t); if (m) { out = HI_RULES[i][1](m); break; } } }
+  if (out === undefined) { const u = U(t); if (u !== t) out = u; }
+  return out === undefined ? s : s.replace(t, out);
+}
+window.ARTIME_tr = (s) => (lang() === 'hi' ? T(s) : s);
+function trNode(root) {
+  if (lang() !== 'hi' || !root) return;
+  if (root.nodeType === 3) { const p = root.parentNode && root.parentNode.nodeName; if (p !== 'TEXTAREA' && p !== 'SCRIPT' && p !== 'STYLE') { const v = T(root.nodeValue); if (v !== root.nodeValue) root.nodeValue = v; } return; }
+  if (root.nodeType !== 1) return;
+  const w = document.createTreeWalker(root, 4 /* text */); let n; const list = [];
+  while ((n = w.nextNode())) list.push(n);
+  list.forEach((x) => trNode(x));
+  const els = (root.matches && root.matches('[placeholder],[aria-label],[title]') ? [root] : []).concat([...root.querySelectorAll('[placeholder],[aria-label],[title]')]);
+  els.forEach((el) => ['placeholder', 'aria-label', 'title'].forEach((a) => { const v = el.getAttribute(a); if (v) { const t = T(v); if (t !== v) el.setAttribute(a, t); } }));
+}
+const langObs = new MutationObserver((recs) => {
+  if (lang() !== 'hi') return;
+  recs.forEach((r) => { if (r.type === 'characterData') trNode(r.target); else r.addedNodes.forEach((n) => trNode(n)); });
+  langObs.takeRecords();       // ignore our own edits
+});
+langObs.observe(document.body, { childList: true, subtree: true, characterData: true });
+document.documentElement.lang = lang();
 
 /* ================= icons ================= */
 const P = {
@@ -138,7 +277,8 @@ const S = {
 };
 window.store = store;
 window.ARTIME_ic = (n, z) => ic(n, z);
-window.ARTIME_toast = (m, b) => toast(m, b);   // Settings uses it from an inline onchange
+window.ARTIME_toast = (m, b) => toast(m, b);
+window.ARTIME_render = () => render();   // Settings uses it from an inline onchange
 const saveQueue = () => { store.set('queue', S.queue); store.set('failed', S.failed); };
 
 /* ================= data model ================= */
@@ -307,6 +447,7 @@ function render() {
     case 'categories': top = topPlain('Categories', 'Manage item categories', true); body = vCategories(); break;
     case 'reports': top = topPlain('Reports', 'Stock movement over time'); body = vReports(); break;
     case 'more': top = topPlain('Settings'); body = vMore(); break;
+    case 'reorder': top = topPlain('Reorder List', 'Items that are low or out of stock', true); body = vReorder(); break;
     case 'pay': top = topPlain('Payments', 'Cash and bank entries'); body = '<div id="money"></div>'; break;
     default: top = topHome(); body = vHome();
   }
@@ -344,7 +485,7 @@ function topForm(type) {
   return `<header class="top center"><a class="ibtn" href="#/home" aria-label="Back">${ic('left', 26)}</a>
     <div class="grow"><h1>Stock ${type === 'in' ? 'In' : 'Out'}</h1><div class="sub">${type === 'in' ? 'Add incoming stock to inventory' : 'Remove stock from inventory'}</div></div><span class="spacer"></span></header>`;
 }
-function syncLine() {
+function syncInfo() {
   const n = S.queue.length;
   let cls = '', txt = '';
   if (S.syncing || S.loading) { cls = 'busy'; txt = S.syncing ? 'Saving to Google Sheets...' : 'Updating...'; }
@@ -352,6 +493,10 @@ function syncLine() {
   else if (S.error) { cls = 'bad'; txt = S.error + ' Tap to retry'; }
   else if (S.synced) { txt = 'Synced ' + ago_(S.synced); }
   else { txt = 'Not synced yet. Tap to load'; }
+  return { cls, txt };
+}
+function syncLine() {
+  const { cls, txt } = syncInfo();
   return `<button class="syncline ${cls}" data-act="sync"><span class="pip"></span>${esc(txt)}</button>`;
 }
 function ago_(ms) {
@@ -376,18 +521,28 @@ function navHTML(name) {
     <a class="n ${on('reports')}" href="#/reports">${ic('chart', 26)}Reports</a>`;
 }
 
-/* ---------- Settings: preference + payments link (payments code loads only when used) ---------- */
+/* ---------- Settings: profile, language, preferences, payments link (payments code loads only when used) ---------- */
+function moneyUser() { try { return JSON.parse(localStorage.getItem('artime.money.user')) || null; } catch (e) { return null; } }
+function roleLine() { const u = moneyUser(); return u ? (u.admin ? 'Admin · Logged in to Payments' : 'Staff · Logged in to Payments') : 'Not logged in to Payments'; }
+function langSeg() {
+  const hi = lang() === 'hi';
+  return `<div class="seg"><button class="${hi ? '' : 'on'}" data-act="lang" data-v="en">English</button><button class="${hi ? 'on' : ''}" data-act="lang" data-v="hi">हिन्दी</button></div>`;
+}
 function prefHTML() {
   syncName();
-  const byName = esc(store.get('by', '')), locked = !!payName();
+  const nm = who(), byName = esc(store.get('by', '')), locked = !!payName(), u = moneyUser();
   const pay = store.get('pref', 'stock') === 'pay', mu = store.get('money.url', '') || (window.APP_CONFIG && APP_CONFIG.moneyUrl) || '';
-  const who = (() => { try { return (JSON.parse(localStorage.getItem('artime.money.user')) || {}).name || ''; } catch (e) { return ''; } })();
-  return `<div class="card prefcard"><b>Your name</b><small>${locked ? 'Taken automatically from your Payments login. Log out of Payments to change it.' : 'Saved on every stock entry and reorder you make. Log in to Payments and it fills in by itself.'}</small><input placeholder="Your name" value="${byName}"${locked ? ' readonly' : ''} onchange="store.set('by', this.value.trim())"></div>
+  return `<div class="card profile"><span class="av big">${esc((nm || '?')[0].toUpperCase())}</span><div class="pn"><b>${nm ? esc(nm) : 'Add your name'}</b><small>${roleLine()}</small></div></div>
+    <div class="sethead">Preferences</div>
+    <div class="card prefcard"><b>Language</b><small>Choose the language of the app.</small>${langSeg()}</div>
+    <div class="card prefcard"><b>Your name</b><small>${locked ? 'Taken automatically from your Payments login. Log out of Payments to change it.' : 'Saved on every stock entry and reorder you make. Log in to Payments and it fills in by itself.'}</small>
+      <input placeholder="Your name" value="${byName}"${locked ? ' readonly' : ''} onchange="store.set('by', this.value.trim())"></div>
     <div class="card prefcard"><b>Main button</b><small>Pick what you use most. It sits in the middle of the bar.</small>
-    <div class="seg"><button class="${pay ? '' : 'on'}" data-m="pref" data-v="stock">Stock <i class="dot b"></i></button><button class="${pay ? 'on g' : ''}" data-m="pref" data-v="pay">Payments <i class="dot g"></i></button></div></div>
-    <div class="card prefcard"><b>Payments</b><small>${who ? 'Logged in as ' + esc(who) : 'Not logged in'}${mu ? ' · sheet connected' : ' · no sheet link yet'}</small>
-    <input id="murl" placeholder="Payments Google Sheet link" value="${mu ? esc(mu.slice(0, 40)) + '…' : ''}" onfocus="this.value=''">
-    <div class="seg"><button data-m="saveurl">Test and save link</button>${who ? '<button data-m="logout">Log out</button>' : ''}</div></div>`;
+      <div class="seg"><button class="${pay ? '' : 'on'}" data-m="pref" data-v="stock">Stock <i class="dot b"></i></button><button class="${pay ? 'on g' : ''}" data-m="pref" data-v="pay">Payments <i class="dot g"></i></button></div></div>
+    <div class="sethead">Payments</div>
+    <div class="card prefcard"><b>Payments</b><small>${u ? 'Logged in as ' + esc(u.name) : 'Not logged in'}</small><small class="${mu ? 'okc' : ''}">${mu ? 'Sheet connected' : 'No sheet link yet'}</small>
+      <input id="murl" placeholder="Payments Google Sheet link" value="${mu ? esc(mu.slice(0, 40)) + '…' : ''}" onfocus="this.value=''">
+      <div class="seg"><button data-m="saveurl">Test and save link</button>${u ? '<button data-m="logout">Log out</button>' : ''}</div></div>`;
 }
 function withMoney(cb) {
   if (window.Money) return cb();
@@ -564,6 +719,21 @@ function vReports() {
       ${list.length ? log : `<div class="empty"><b>No movements</b>Nothing recorded in this period.</div>`}</div>`;
 }
 
+/* ---------- Reorder List (all low / out items, grouped by supplier) ---------- */
+function vReorder() {
+  const its = items().filter((i) => i.st === 'out' || i.st === 'low');
+  if (!S.items.length) return `<div class="card empty"><b>No items loaded</b>Open Home and tap the sync line.</div>`;
+  if (!its.length) return `<div class="card empty">${ic('check', 40)}<b>Nothing is running low</b>Items show here when they reach their reorder level.</div>`;
+  const setup = store.get('rsetup', []), groups = {};
+  its.sort((x, y) => (x.st === y.st ? x.title.localeCompare(y.title) : x.st === 'out' ? -1 : 1)).forEach((i) => {
+    const r = setup.find((q) => String(q.code).trim().toUpperCase() === String(i.code).trim().toUpperCase());
+    const k = (r && r.supplier) || '';
+    (groups[k] = groups[k] || []).push(i);
+  });
+  const names = Object.keys(groups).sort((x, y) => (x === '' ? 1 : y === '' ? -1 : x.localeCompare(y)));
+  return `<div class="count">${its.length} items to order</div>` + names.map((k) => `<div class="card sec"><div class="sec-h"><h2>${k ? esc(k) : 'No supplier set'}</h2></div>${groups[k].map((i) => itemRow(i)).join('')}</div>`).join('');
+}
+
 /* ---------- More ---------- */
 function vMore() { return prefHTML() + vMore0(); }
 function vMore0() {
@@ -572,18 +742,21 @@ function vMore0() {
   const ent = (e, x) => `<div class="q"><span class="aic ${e.type}" style="width:38px;height:38px">${ic(e.type === 'in' ? 'up' : 'down', 18, 2.2)}</span><div class="m"><b>${e.type === 'in' ? '+' : '-'}${num(e.qty)} ${esc(nm[e.code] || e.code)}</b><small>${esc(dShort(e.date))}${e.msg ? ' - ' + esc(e.msg) : ''}</small></div><button class="x" data-act="${x}" data-id="${esc(e.id)}">Discard</button></div>`;
   const installable = S.installEvt && !isStandalone();
   const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !isStandalone();
-  return `<div class="card group"><h2>Google Sheet connection</h2><p>Paste the Web app link that ends with /exec.</p>
+  return `<div class="sethead">Stock sheet</div>
+    <div class="card group"><h2>Google Sheet connection</h2><p>Paste the Web app link that ends with /exec.</p>
       <label class="field">${ic('file', 20)}<input id="url" type="url" inputmode="url" placeholder="https://script.google.com/macros/s/.../exec" value="${esc(S.url)}" data-bind="url" autocomplete="off"></label>
       <div class="btns"><button class="btn" data-act="save-url">Save and sync</button>${CFG.scriptUrl && S.url !== CFG.scriptUrl ? '<button class="btn ghost" data-act="reset-url">Use default link</button>' : ''}</div>
       <div class="kv" style="margin-top:8px"><span>Last sync</span><b>${S.synced ? esc(ago_(S.synced)) : 'Never'}</b></div>
       ${S.error ? `<div class="banner bad" style="margin:8px 0 0">${esc(S.error)}</div>` : ''}</div>
+    <div class="sethead">Data on this phone</div>
     <div class="card group"><h2>Waiting to sync</h2><p>${q.length ? 'Saved on this phone. They are sent to the sheet as soon as you are online.' : 'Everything is saved to the sheet.'}</p>
       ${q.map((e) => ent(e, 'discard')).join('')}
       ${q.length ? `<div class="btns"><button class="btn" data-act="sync">${ic('refresh', 18)}Sync now</button></div>` : ''}</div>
     ${f.length ? `<div class="card group"><h2>Not saved</h2><p>The sheet rejected these entries. Fix the cause, then enter them again.</p>${f.map((e) => ent(e, 'discard-failed')).join('')}</div>` : ''}
+    <div class="sethead">App</div>
     <div class="card group"><h2>Install app</h2><p>${isStandalone() ? 'Installed. You are using the app version.' : installable ? 'Add ARTIME Stock to your home screen so it opens like a normal app.' : ios ? 'On iPhone: tap the Share button, then Add to Home Screen.' : 'Use your browser menu and choose Install app or Add to Home screen.'}</p>
       ${installable ? `<div class="btns"><button class="btn" data-act="install">${ic('download', 18)}Install</button></div>` : ''}</div>
-    <div class="card group"><h2>This phone</h2><div class="kv"><span>App version</span><b>v15</b></div><div class="kv"><span>Items cached</span><b>${S.items.length}</b></div><div class="kv"><span>Movements cached</span><b>${S.history.length}</b></div>
+    <div class="card group"><h2>This phone</h2><div class="kv"><span>App version</span><b>v16</b></div><div class="kv"><span>Items cached</span><b>${S.items.length}</b></div><div class="kv"><span>Movements cached</span><b>${S.history.length}</b></div>
       <div class="btns"><button class="btn ghost" data-act="refresh">${ic('refresh', 18)}Reload from sheet</button></div></div>`;
 }
 
@@ -730,20 +903,24 @@ function renderSheet() {
   if (s.type === 'menu') {
     const link = (href, icon, title, sub) => `<a class="mi" href="${href}">${ic(icon, 24)}<span><b>${title}</b><small>${sub}</small></span>${ic('right', 18)}</a>`;
     const al = items().filter((i) => i.st === 'out' || i.st === 'low').length;
+    const td = today(); let tin = 0, tout = 0;
+    moves().forEach((e) => { if (e.date === td && !isDial(e.code)) { const q = Number(e.qty) || 0; if (e.type === 'in') tin += q; else tout += q; } });
+    const si = syncInfo(), nm = who();
     el.innerHTML = `<div class="scrim side" data-act="close"><aside class="drawer" role="dialog" aria-label="Menu">
-      <div class="dh"><span class="av">${esc((who() || '?')[0].toUpperCase())}</span><div class="dn">${who() ? `<b>${esc(who())}</b>` : '<a href="#/more"><b>Add your name</b></a>'}<small>${esc(APP_NAME)} &middot; ${esc(TAGLINE)}</small></div></div>
-      <div class="dsec">Quick actions</div>
-      ${link('#/pay', 'cash', 'Payments', 'Cash and bank, received or paid')}
+      <div class="dh"><span class="av">${esc((nm || '?')[0].toUpperCase())}</span><div class="dn">${nm ? `<b>${esc(nm)}</b>` : '<a href="#/more"><b>Add your name</b></a>'}<small>${roleLine()}</small></div></div>
+      <div class="dsync ${si.cls}"><span class="pip"></span><span class="t">${esc(si.txt)}</span><button data-act="sync">Sync now</button></div>
+      <div class="dsec">Today at a glance</div>
+      <div class="dtoday"><div class="g"><b>+${num(tin)}</b><small>In today</small></div><div class="r"><b>-${num(tout)}</b><small>Out today</small></div><div class="${al ? 'a' : ''}"><b>${al}</b><small>To reorder</small></div></div>
+      <div class="dsec">Tools</div>
+      ${link('#/reorder', 'bell', 'Reorder List', al ? al + ' items to order' : 'Nothing to order')}
       ${link('#/dial', 'gear', 'Dial Out', 'Make dials, choose the parts')}
-      ${link('#/in', 'up', 'Stock In', 'Add incoming stock')}
-      ${link('#/out', 'down', 'Stock Out', 'Record outgoing stock')}
-      <div class="dsec">Browse</div>
-      ${link('#/items', 'cube', 'All Items', 'Search and filter')}
-      ${link('#/items?status=alert', 'bell', 'Low Stock Alerts', al ? al + ' need attention' : 'Nothing running low')}
-      ${link('#/categories', 'grid', 'Categories', 'Packaging and clock items')}
-      ${link('#/reports', 'chart', 'Reports', 'Stock movement over time')}
+      ${link('#/pay?v=report', 'chart', 'Payments Report', 'Cash and bank totals')}
+      <div class="dsec">Language</div>
+      <div class="dlang">${langSeg()}</div>
       <div class="dsec">App</div>
-      ${link('#/more', 'gear', 'Settings', 'Main button, payments, sheet link')}
+      ${link('#/more', 'gear', 'Settings', 'Name, language, links, install')}
+      ${S.installEvt && !isStandalone() ? `<button class="mi" data-act="install">${ic('download', 24)}<span><b>Install app</b><small>Opens full screen like a normal app</small></span></button>` : ''}
+      <div class="dfoot">${esc(APP_NAME)} &middot; v16</div>
     </aside></div>`;
     return;
   }
@@ -780,6 +957,7 @@ document.addEventListener('click', (ev) => {
   switch (act) {
     case 'sync': S.queue.length ? sync() : refresh(); break;
     case 'refresh': refresh(); break;
+    case 'lang': store.set('lang', v === 'hi' ? 'hi' : 'en'); document.documentElement.lang = lang(); render(); break;
     case 'add': S.sheet = { type: 'add' }; renderSheet(); break;
     case 'menu': S.sheet = { type: 'menu' }; renderSheet(); break;
     case 'close': if (ev.target === el) { S.sheet = null; renderSheet(); } break;
