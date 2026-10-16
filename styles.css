@@ -451,3 +451,14 @@ a { color: inherit; text-decoration: none; }
 .drawer .dh .av { width: 48px; height: 48px; border-radius: 50%; background: var(--blue); color: #fff; display: grid; place-items: center; font-size: 22px; font-weight: 800; flex: none; }
 .drawer .dh .dn { min-width: 0; } .drawer .dh .dn b { font-size: 20px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .drawer .dh .dn a b { color: var(--blue); }
+
+/* ---- payments report ---- */
+.pmsum { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+.pmsum > div { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 12px; min-width: 0; }
+.pmsum small { display: block; color: var(--mute); font-size: 13px; }
+.pmsum b { display: block; font-size: 18px; font-weight: 800; overflow-wrap: anywhere; }
+.pmsum .g b { color: var(--green); } .pmsum .r b { color: var(--red); }
+.pmbar { display: flex; justify-content: space-between; align-items: center; margin: 10px 2px 0; color: var(--mute); font-size: 13px; }
+.pmbar button { color: var(--blue); font-weight: 600; padding: 6px 4px; }
+.pmbal { text-align: right; } .pmbal small { display: block; color: var(--mute); font-size: 12px; } .pmbal b { font-size: 16px; }
+.pmi.md { background: var(--blue-t); color: var(--blue); }
