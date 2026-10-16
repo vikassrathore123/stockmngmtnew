@@ -921,14 +921,23 @@ function rsMsg(it, row, qty) {
   const v = { supplier: (row && row.supplier) || '', item: (row && row.sname) || it.title, qty: qty, unit: String(unitLabel(it.unit)).toLowerCase(), stock: it.eff, date: dRel(today()) };
   return t.replace(/\{(\w+)\}/g, (m, k) => (k in v ? v[k] : m));
 }
-function openReorder(code) {
+const rowFor = (code) => store.get('rsetup', []).find((r) => String(r.code).trim().toUpperCase() === String(code).trim().toUpperCase()) || null;
+function openReorder(code, fresh, note) {
   const it = items().find((i) => i.code === code); if (!it) return;
-  const row = store.get('rsetup', []).find((r) => r.code === code) || null;
+  const row = rowFor(code);
+  // number / message missing on this phone: pull the latest Reorder Setup straight from the sheet, then reopen
+  if (!fresh && (!row || !row.phone) && S.url && navigator.onLine) {
+    apiGet().then((j) => {
+      if (!document.getElementById('rs')) return;
+      if (j && Array.isArray(j.reorderSetup)) { store.set('rsetup', j.reorderSetup); if (j.reorderMessage) store.set('rmsg', j.reorderMessage); openReorder(code, true); }
+      else openReorder(code, true, 'Your Stock Google Script is an old version. Paste the new StockScript.gs, then Deploy > Manage deployments > New version.');
+    }).catch(() => { if (document.getElementById('rs')) openReorder(code, true); });
+  }
   const q0 = (row && row.qty) || Math.max(1, Math.round(it.min * 2 - it.eff));
   let el = document.getElementById('rs'); if (!el) { el = document.createElement('div'); el.id = 'rs'; document.body.appendChild(el); }
   el.innerHTML = `<div class="rsb" data-rx="close"><div class="rsc" onclick="event.stopPropagation()"><div class="grab"></div>
     <h3>Reorder ${esc(it.title)}</h3><small>${esc(it.code)} · Stock ${num(it.eff)} ${esc(unitLabel(it.unit))} · Min ${num(it.min)}</small>
-    <p class="rsup">${row && row.phone ? 'To: <b>' + esc(row.supplier || 'Supplier') + '</b> (' + esc(row.phone) + ')' : '<span class="r">No supplier number yet. Add it in the Reorder Setup sheet. You can still pick a contact in WhatsApp.</span>'}</p>
+    <p class="rsup">${row && row.phone ? 'To: <b>' + esc(row.supplier || 'Supplier') + '</b> (' + esc(row.phone) + ')' : '<span class="r">' + esc(note || (row ? 'No WhatsApp number for this item in the Reorder Setup sheet.' : (fresh ? 'This code is not filled in the Reorder Setup sheet.' : 'Reading supplier from the sheet...'))) + ' You can still pick a contact in WhatsApp.</span>'}</p>
     <label>Quantity</label><input id="rqty" type="number" inputmode="decimal" value="${q0}">
     <label>Message</label><textarea id="rtxt" rows="4">${esc(rsMsg(it, row, q0))}</textarea>
     <button class="go" data-rx="send" data-code="${esc(code)}">Send on WhatsApp</button><button class="rcancel" data-rx="close">Cancel</button></div></div>`;
@@ -945,7 +954,7 @@ document.addEventListener('click', (ev) => {
     if (x.dataset.rx === 'send') {
       const code = x.dataset.code, qty = parseFloat(document.getElementById('rqty').value);
       if (!(qty > 0)) { toast('Enter a quantity', true); return; }
-      const row = store.get('rsetup', []).find((q) => q.code === code) || {}, text = document.getElementById('rtxt').value;
+      const row = rowFor(code) || {}, text = document.getElementById('rtxt').value;
       store.set('rq', store.get('rq', []).concat([{ id: 'R' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), code, qty, date: today(), supplier: row.supplier || '', phone: row.phone || '', by: store.get('by', '') || '-' }]));
       if (el) el.remove();
       window.open('https://wa.me/' + waNum(row.phone) + '?text=' + encodeURIComponent(text), '_blank');
