@@ -46,6 +46,7 @@
           else if (x.s === 'bad') { M.q = M.q.filter((y) => y.id !== e.id); M.failed.push(Object.assign({}, e, { why: x.why || 'Rejected' })); }
         });
         M.hist = M.hist.slice(0, 15);
+        if (mine.some((e) => r[e.id] && r[e.id].s !== 'bad')) setTimeout(() => { if ($('#paydash') || $('#m-rep')) loadReport(true); }, 800);
         if (M.q.some((e) => e.u === M.user.name)) later(4000);
       } else later(j.net ? 8000 + Math.random() * 4000 : 15000);   // unknown reply: keep entries, never fail them
     } catch (e) { later(15000); } finally { syncing = false; keep(); ui(); }
@@ -83,9 +84,8 @@
       const t = (v) => (M.type === v ? 'on' : ''), m = (v) => (M.mode === v ? 'on' : '');
       el.innerHTML = `<div class="form pay">
         <div class="pmwho"><span>Logged in as <b>${esc(M.user.name)}</b></span><button data-m="logout">Log out</button></div>
-        <div class="tabs"><button class="tab ${M.view === 'entry' ? 'on' : ''}" data-m="view" data-v="entry">${ic('plus')}New entry</button><button class="tab ${M.view === 'report' ? 'on' : ''}" data-m="view" data-v="report">${ic('chart')}Report</button></div>
         <div id="m-entry" style="display:${M.view === 'entry' ? 'block' : 'none'}">
-        <div class="tabs" style="margin-top:14px"><button class="tab rcv ${t('in')}" data-m="type" data-v="in">${ic('down')}Received</button><button class="tab pd ${t('out')}" data-m="type" data-v="out">${ic('up')}Paid</button></div>
+        <div class="tabs"><button class="tab rcv ${t('in')}" data-m="type" data-v="in">${ic('up')}Received</button><button class="tab pd ${t('out')}" data-m="type" data-v="out">${ic('down')}Paid</button></div>
         <label class="fl" for="m-amt">Amount<i>*</i></label>
         <div class="field"><b class="rup">₹</b><input id="m-amt" inputmode="decimal" placeholder="0" autocomplete="off"></div>
         <div class="fl">Cash or bank<i>*</i></div>
@@ -121,17 +121,50 @@
     const f = new Date(); f.setDate(f.getDate() - (Number(M.range) - 1));
     return d >= f.toLocaleDateString('en-CA');
   }
-  async function loadReport() {
+  async function loadReport(force) {
     if (!M.user || !url() || M.repBusy) return;
-    if (!M.pin) { drawReport(); return; }
-    M.repBusy = true; M.repErr = ''; drawReport();
+    if (!M.pin) { drawReport(); drawDash(); return; }
+    if (!force && M.rep && M.rep.user === M.user.name && Date.now() - (M.repAt || 0) < 60000) { drawReport(); drawDash(); return; }
+    if (!navigator.onLine) { drawReport(); drawDash(); return; }
+    M.repBusy = true; M.repErr = ''; drawReport(); drawDash();
     const j = await post({ action: 'report', pin: M.pin, dev });
     M.repBusy = false;
-    if (j.ok && Array.isArray(j.rows)) { M.rep = j; s('rep', j); }
+    if (j.ok && Array.isArray(j.rows)) { M.rep = j; M.repAt = Date.now(); s('rep', j); }
     else if (j.net) M.repErr = 'No connection. Showing the last saved report.';
     else if (j.error === 'Unknown action') M.repErr = 'The Payments script is an old version. Paste the new MoneyScript.gs, then Deploy > Manage deployments > New version.';
     else { M.repErr = j.error || 'Could not load the report.'; if (/PIN/i.test(M.repErr)) { M.pin = null; keep(); } }
-    drawReport();
+    drawReport(); drawDash();
+  }
+
+  /* ---------- Home dashboard (shown on Home when Payments is the main button) ---------- */
+  function drawDash() {
+    const el = $('#paydash'); if (!el) return;
+    try {
+      if (!url()) { el.innerHTML = '<div class="card group"><h2>No payments sheet link yet</h2><p>Add the Payments Google Sheet link in Settings.</p><div class="btns"><a class="btn" href="#/more">Open Settings</a></div></div>'; return; }
+      if (!M.user) { el.innerHTML = '<div class="card group"><h2>Log in to see payments</h2><p>Enter your PIN once on this phone.</p><div class="btns"><a class="btn" style="background:var(--green)" href="#/pay">Enter PIN</a></div></div>'; return; }
+      const R = M.rep && M.rep.user === M.user.name ? M.rep : null;
+      const td = today(), pend = M.q.filter((e) => e.u === M.user.name);
+      let tin = 0, tout = 0; const bal = {};
+      if (R) {
+        Object.keys(R.totals || {}).forEach((k) => { bal[k] = (R.totals[k].in || 0) - (R.totals[k].out || 0); });
+        R.rows.forEach((r) => { if (r[0] === td) { if (r[1] === 'in') tin += r[2]; else tout += r[2]; } });
+      }
+      pend.forEach((e) => {                                   // entries still on this phone count too
+        const a = e.bank && String(e.bank).toLowerCase() !== 'cash' ? e.bank : 'Cash';
+        bal[a] = (bal[a] || 0) + (e.type === 'in' ? 1 : -1) * e.amount;
+        if (e.date === td) { if (e.type === 'in') tin += e.amount; else tout += e.amount; }
+      });
+      const net = tin - tout;
+      const names = Object.keys(bal).sort((x, y) => (x === 'Cash' ? -1 : y === 'Cash' ? 1 : x.localeCompare(y)));
+      const row = (e, tag) => `<div class="pmrow" style="padding:10px 16px"><span class="pmi ${e.type}">${e.type === 'in' ? '+' : '−'}</span><div class="pmm"><b class="${e.type === 'in' ? 'g' : 'r'}">${rs(e.amount)}</b><small>${esc(e.bank || 'Cash')}${e.party ? ' · ' + esc(e.party) : ''}</small></div>${tag}</div>`;
+      const recent = pend.slice().reverse().map((e) => row(e, '<span class="pmtag w">waiting</span>')).concat(R ? R.rows.slice(0, 6).map((r) => row({ type: r[1], amount: r[2], bank: r[4], party: r[3] }, `<span class="pmtag">${esc(r[0] === td ? 'Today' : dShort(r[0]))}</span>`)) : []).slice(0, 6);
+      el.innerHTML = `<div class="pmbar" style="margin-top:6px"><span>${R ? (R.scope === 'all' ? 'Everyone\'s entries' : 'Your entries') : (M.repBusy ? 'Loading…' : (M.pin ? '' : 'Enter PIN to load totals'))}</span><button data-m="dashreload">${M.repBusy ? 'Loading…' : 'Refresh'}</button></div>
+        <div class="pmsum"><div class="g"><small>Received today</small><b>${rs(tin)}</b></div><div class="r"><small>Paid today</small><b>${rs(tout)}</b></div><div class="${net < 0 ? 'r' : 'g'}"><small>Net today</small><b>${net < 0 ? '−' : ''}${rs(Math.abs(net))}</b></div></div>
+        <div class="acts" style="grid-template-columns:1fr 1fr;margin-top:12px"><a class="bigact in" href="#/pay?t=in">${ic('up', 30, 2.2)}<span><b>Payment In</b><small>Money received</small></span></a><a class="bigact out" href="#/pay?t=out">${ic('down', 30, 2.2)}<span><b>Payment Out</b><small>Money paid</small></span></a></div>
+        ${names.length ? `<div class="card group" style="margin-top:12px"><h2>Cash and banks</h2>${names.map((n) => `<div class="pmrow"><span class="pmi ${n === 'Cash' ? 'in' : 'md'}">${ic(n === 'Cash' ? 'cash' : 'bank', 18)}</span><div class="pmm"><b>${esc(n)}</b></div><div class="pmbal ${bal[n] < 0 ? 'r' : ''}"><small>Balance now</small><b>${bal[n] < 0 ? '−' : ''}${rs(Math.abs(bal[n]))}</b></div></div>`).join('')}</div>` : ''}
+        <div class="card sec" style="margin-top:12px;overflow:hidden"><div class="sec-h" style="padding:14px 16px 4px"><h2>Recent payments</h2><a href="#/payreport">Full report</a></div>${recent.length ? recent.join('') : '<div class="empty"><b>No entries</b>Nothing recorded in this period.</div>'}</div>
+        ${M.repErr ? `<div class="banner bad" style="margin-top:10px">${esc(M.repErr)}</div>` : ''}`;
+    } catch (e) { /* dashboard problems must never block the app */ }
   }
   function drawReport() {
     const el = $('#m-rep'); if (!el || !M.user) return;
@@ -178,7 +211,7 @@
         if (e1) e1.style.display = M.view === 'entry' ? 'block' : 'none'; if (e2) e2.style.display = M.view === 'report' ? 'block' : 'none';
         if (M.view === 'report') { drawReport(); loadReport(); }
       } else if (a === 'range') { M.range = b.dataset.v; drawReport(); }
-      else if (a === 'reload') loadReport();
+      else if (a === 'reload' || a === 'dashreload') loadReport(true);
       else if (a === 'repin') {
         const pin = String(($('#m-rpin') || {}).value || '').trim(); if (!pin) return;
         M.repErr = 'Checking…'; drawReport();
@@ -192,6 +225,8 @@
         M.type = b.dataset.v; flip('#money [data-m="type"]', M.type);
         const sb = $('#m-submit'), sl = $('#m-sl');
         if (sb) sb.classList.toggle('out', M.type === 'out'); if (sl) sl.textContent = M.type === 'in' ? 'Save Received' : 'Save Paid';
+        const h1 = document.querySelector('header.top h1'), sub = document.querySelector('header.top .sub');
+        if (h1 && $('#m-entry')) { h1.textContent = M.type === 'in' ? 'Payment In' : 'Payment Out'; if (sub) sub.textContent = M.type === 'in' ? 'Money received' : 'Money paid'; }
       } else if (a === 'mode') {
         M.mode = b.dataset.v; s('mode', M.mode); flip('#money [data-m="mode"]', M.mode);
         const bx = $('#m-bankbox'); if (bx) bx.style.display = M.mode === 'bank' ? 'block' : 'none';
@@ -240,5 +275,6 @@
   document.addEventListener('keydown', (ev) => { if (ev.key !== 'Enter' || !ev.target) return; if (ev.target.id === 'mpin') act('pin'); else if (ev.target.id === 'm-rpin') act('repin', ev.target); });
   document.addEventListener('input', (ev) => { if (ev.target && ev.target.id === 'm-bank') { M.bank = ev.target.value; flip('#money [data-m="bank"]', M.bank); } });
   window.addEventListener('online', () => later(500));
-  window.Money = { act, boot: () => later(800), mount: () => { M.msg = ''; if (/[?&]v=report/.test(location.hash)) M.view = 'report'; draw(); sync(); } };
+  window.Money = { act, boot: () => later(800), mount: (view, t) => { M.msg = ''; M.view = view === 'report' ? 'report' : 'entry'; M.type = t === 'out' ? 'out' : 'in'; draw(); sync(); },
+    dash: () => { M.msg = ''; drawDash(); loadReport(); sync(); } };
 })();
