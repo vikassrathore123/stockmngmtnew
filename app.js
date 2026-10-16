@@ -89,6 +89,9 @@ const HI = {
   'This code is not filled in the Reorder Setup sheet.': 'यह कोड Reorder Setup शीट में भरा नहीं है।', 'Enter a quantity': 'मात्रा डालें', 'Reorder had a problem. Nothing was lost.': 'ऑर्डर में दिक्कत आई। कुछ नहीं खोया।',
   'Link saved': 'लिंक सेव हुआ', 'App installed': 'ऐप इंस्टॉल हो गया', 'That does not look like a Web app link ending in /exec.': 'यह /exec पर खत्म होने वाला Web app लिंक नहीं लगता।',
   /* side menu + settings */
+  'Payment In': 'पैसा आया', 'Payment Out': 'पैसा गया', 'Money received': 'मिला हुआ पैसा', 'Money paid': 'दिया हुआ पैसा', 'New payment': 'नया भुगतान',
+  'Stock Overview': 'स्टॉक की स्थिति', 'Items and alerts': 'आइटम और अलर्ट', 'Items that are low or out of stock': 'जो आइटम कम या खत्म हैं', 'Received today': 'आज मिला', 'Paid today': 'आज दिया', 'Net today': 'आज का नेट',
+  'Recent payments': 'हाल के भुगतान', 'Full report': 'पूरी रिपोर्ट', 'Log in to see payments': 'भुगतान देखने के लिए लॉगिन करें', 'Enter PIN': 'PIN डालें', 'Enter PIN to load totals': 'हिसाब लोड करने के लिए PIN डालें',
   'Admin · Logged in to Payments': 'एडमिन · भुगतान में लॉगिन', 'Staff · Logged in to Payments': 'स्टाफ · भुगतान में लॉगिन', 'Not logged in to Payments': 'भुगतान में लॉगिन नहीं',
   'Add your name': 'अपना नाम जोड़ें', 'Today at a glance': 'आज एक नज़र में', 'In today': 'आज इन', 'Out today': 'आज आउट', 'To reorder': 'ऑर्डर करना है',
   'Tools': 'टूल्स', 'Reorder List': 'ऑर्डर सूची', 'Nothing to order': 'ऑर्डर करने को कुछ नहीं', 'Items that are low or out of stock': 'जो आइटम कम या खत्म हैं',
@@ -97,7 +100,7 @@ const HI = {
   'Preferences': 'पसंद', 'Choose the language of the app.': 'ऐप की भाषा चुनें।', 'Your name': 'आपका नाम',
   'Taken automatically from your Payments login. Log out of Payments to change it.': 'भुगतान लॉगिन से अपने-आप लिया गया है। बदलने के लिए भुगतान से लॉग आउट करें।',
   'Saved on every stock entry and reorder you make. Log in to Payments and it fills in by itself.': 'हर स्टॉक एंट्री और ऑर्डर पर सेव होता है। भुगतान में लॉगिन करते ही अपने-आप भर जाएगा।',
-  'Main button': 'मुख्य बटन', 'Pick what you use most. It sits in the middle of the bar.': 'जो सबसे ज़्यादा इस्तेमाल करें वह चुनें। यह बार के बीच में रहेगा।',
+  'Main button': 'मुख्य बटन', 'The one you pick gets the big middle button and shows on Home. The other moves to the small button on the right.': 'जिसे चुनेंगे उसे बीच का बड़ा बटन मिलेगा और वही होम पर दिखेगा। दूसरा दाईं ओर छोटे बटन में चला जाएगा।',
   'Logged in as': 'लॉगिन:', 'Not logged in': 'लॉगिन नहीं', 'Sheet connected': 'शीट जुड़ी है', 'No sheet link yet': 'अभी शीट लिंक नहीं', 'Payments Google Sheet link': 'भुगतान Google Sheet का लिंक',
   'Test and save link': 'लिंक जाँचकर सेव करें', 'Log out': 'लॉग आउट', 'Stock sheet': 'स्टॉक शीट', 'Google Sheet connection': 'Google Sheet कनेक्शन', 'Paste the Web app link that ends with /exec.': '/exec पर खत्म होने वाला Web app लिंक यहाँ चिपकाएँ।',
   'Save and sync': 'सेव करके सिंक करें', 'Use default link': 'डिफ़ॉल्ट लिंक इस्तेमाल करें', 'Last sync': 'आख़िरी सिंक', 'Never': 'कभी नहीं',
@@ -141,7 +144,7 @@ const HI_RULES = [
   [/^(\d+) items?$/, (m) => m[1] + ' आइटम'],
   [/^(\d+) items, (.+) in stock$/, (m) => m[1] + ' आइटम, ' + m[2] + ' स्टॉक में'],
   [/^(\d+) need attention$/, (m) => m[1] + ' पर ध्यान चाहिए'],
-  [/^(\d+) items to order$/, (m) => m[1] + ' आइटम ऑर्डर करने हैं'],
+  [/^(\d+) items? to order$/, (m) => m[1] + ' आइटम ऑर्डर करने हैं'],
   [/^(.*) - without (.*)$/, (m) => m[1] + ' - बिना ' + m[2]],
   [/^Without (.+)$/, (m) => 'बिना ' + m[1]],
   [/^Reordered (.+) · (.+)$/, (m) => 'ऑर्डर किया ' + m[1] + ' · ' + T(m[2])],
@@ -453,20 +456,23 @@ function render() {
     case 'reports': top = topPlain('Reports', 'Stock movement over time'); body = vReports(); break;
     case 'more': top = topPlain('Settings'); body = vMore(); break;
     case 'reorder': top = topPlain('Reorder List', 'Items that are low or out of stock', true); body = vReorder(); break;
-    case 'pay': top = topPlain('Payments', 'Cash and bank entries'); body = '<div id="money"></div>'; break;
-    default: top = topHome(); body = vHome();
+    case 'pay': { const t = r.q.get('t'); top = topPay(t); body = '<div id="money"></div>'; break; }
+    case 'payreport': top = topPlain('Payments Report', 'Cash and bank totals', true); body = '<div id="money"></div>'; break;
+    case 'stock': top = topPlain('Stock Overview', 'Items and alerts', true) + syncLine(); body = vHome(); break;
+    default: if (payFirst()) { top = topHome(); body = vHomePay(); } else { top = topHome(); body = vHome(); }
   }
   app.innerHTML = top + body;
   $('#nav').innerHTML = isForm ? '' : navHTML(r.name);
   renderSheet();
   if (isForm) updateFormDynamic();
-  if (r.name === 'pay') withMoney(() => window.Money.mount());
+  if (r.name === 'pay' || r.name === 'payreport') withMoney(() => window.Money.mount(r.name === 'payreport' ? 'report' : 'entry', r.q.get('t')));
+  else if (r.name === 'home' && payFirst()) withMoney(() => window.Money.dash());
 }
 // refresh without clobbering what the person is typing
 function softRender() {
   const r = route();
   const ae = document.activeElement;
-  if (r.name === 'pay') return;           // Payments draws and refreshes itself
+  if (r.name === 'pay' || r.name === 'payreport') return;           // Payments draws and refreshes itself
   if (isFormRoute(r.name)) { updateFormDynamic(); return; }
   if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'SELECT')) { if (r.name === 'items') renderItemList(); return; }
   render();
@@ -484,12 +490,25 @@ function topHome() {
 function topPlain(title, sub, back) {
   return `<header class="top plain">${back ? `<a class="ibtn" href="#/home" aria-label="Back">${ic('left', 26)}</a>` : ''}<div class="grow"><h1>${esc(title)}</h1>${sub ? `<div class="sub">${esc(sub)}</div>` : ''}</div></header>`;
 }
+function topPay(t) {
+  const title = t === 'in' ? 'Payment In' : t === 'out' ? 'Payment Out' : 'Payments';
+  const sub = t === 'in' ? 'Money received' : t === 'out' ? 'Money paid' : 'Cash and bank entries';
+  return `<header class="top center"><a class="ibtn" href="#/home" aria-label="Back">${ic('left', 26)}</a>
+    <div class="grow"><h1>${title}</h1><div class="sub">${sub}</div></div><span class="spacer"></span></header>`;
+}
+function vHomePay() {
+  const al = items().filter((i) => i.st === 'out' || i.st === 'low').length;
+  return `<div id="paydash"></div>
+    ${al ? `<a class="card payalert" href="#/reorder">${ic('bell', 24)}<span><b>${al} ${al === 1 ? 'item' : 'items'} to order</b><small>Items that are low or out of stock</small></span>${ic('right', 18)}</a>` : ''}
+    <a class="card payalert" href="#/stock">${ic('cube', 24)}<span><b>Stock Overview</b><small>Items and alerts</small></span>${ic('right', 18)}</a>`;
+}
 function topForm(type) {
   if (type === 'dial') return `<header class="top center"><a class="ibtn" href="#/home" aria-label="Back">${ic('left', 26)}</a>
     <div class="grow"><h1>Dial Out</h1><div class="sub">Make dials - the parts go out together</div></div><span class="spacer"></span></header>`;
   return `<header class="top center"><a class="ibtn" href="#/home" aria-label="Back">${ic('left', 26)}</a>
     <div class="grow"><h1>Stock ${type === 'in' ? 'In' : 'Out'}</h1><div class="sub">${type === 'in' ? 'Add incoming stock to inventory' : 'Remove stock from inventory'}</div></div><span class="spacer"></span></header>`;
 }
+const payFirst = () => store.get('pref', 'stock') === 'pay';
 function syncInfo() {
   const n = S.queue.length;
   let cls = '', txt = '';
@@ -514,16 +533,16 @@ function ago_(ms) {
 
 function navHTML(name) {
   const on = (n) => (n === name || (n === 'items' && name === 'categories') ? 'on' : '');
-  const pay = store.get('pref', 'stock') === 'pay';
+  const pf = payFirst(), isPay = name === 'pay' || name === 'payreport';
   const stockFab = `<span class="fabwrap"><button class="fab" data-act="add" aria-label="Add stock entry">${ic('plus', 30, 2.4)}</button></span>`;
-  const payFab = `<span class="fabwrap"><a class="fab pay" href="#/pay" aria-label="Payments">${ic('plus', 30, 2.4)}</a></span>`;
-  const stockTab = `<button class="n" data-act="add">${ic('up', 26)}Stock</button>`;
-  const payTab = `<a class="n paytab ${on('pay')}" href="#/pay">${ic('cash', 26)}Payments</a>`;
+  const payFab = `<span class="fabwrap"><button class="fab pay" data-act="payadd" aria-label="Add payment">${ic('plus', 30, 2.4)}</button></span>`;
+  const stockMini = `<button class="n mini st" data-act="add" aria-label="Add stock entry"><i class="mfab b">${ic('plus', 20, 2.8)}</i>Stock</button>`;
+  const payMini = `<button class="n mini pm ${isPay ? 'on' : ''}" data-act="payadd" aria-label="Add payment"><i class="mfab g">${ic('plus', 20, 2.8)}</i>Payments</button>`;
   return `<a class="n ${on('home')}" href="#/home">${ic('home', 26)}Home</a>
     <a class="n ${on('items')}" href="#/items">${ic('cube', 26)}Items</a>
-    ${pay ? payFab : stockFab}
-    ${pay ? stockTab : payTab}
-    <a class="n ${on('reports')}" href="#/reports">${ic('chart', 26)}Reports</a>`;
+    ${pf ? payFab : stockFab}
+    <a class="n ${on('reports')}" href="#/reports">${ic('chart', 26)}Reports</a>
+    ${pf ? stockMini : payMini}`;
 }
 
 /* ---------- Settings: profile, language, preferences, payments link (payments code loads only when used) ---------- */
@@ -542,7 +561,7 @@ function prefHTML() {
     <div class="card prefcard"><b>Language</b><small>Choose the language of the app.</small>${langSeg()}</div>
     <div class="card prefcard"><b>Your name</b><small>${locked ? 'Taken automatically from your Payments login. Log out of Payments to change it.' : 'Saved on every stock entry and reorder you make. Log in to Payments and it fills in by itself.'}</small>
       <input placeholder="Your name" value="${byName}"${locked ? ' readonly' : ''} onchange="store.set('by', this.value.trim())"></div>
-    <div class="card prefcard"><b>Main button</b><small>Pick what you use most. It sits in the middle of the bar.</small>
+    <div class="card prefcard"><b>Main button</b><small>The one you pick gets the big middle button and shows on Home. The other moves to the small button on the right.</small>
       <div class="seg"><button class="${pay ? '' : 'on'}" data-m="pref" data-v="stock">Stock <i class="dot b"></i></button><button class="${pay ? 'on g' : ''}" data-m="pref" data-v="pay">Payments <i class="dot g"></i></button></div></div>
     <div class="sethead">Payments</div>
     <div class="card prefcard"><b>Payments</b><small>${u ? 'Logged in as ' + esc(u.name) : 'Not logged in'}</small><small class="${mu ? 'okc' : ''}">${mu ? 'Sheet connected' : 'No sheet link yet'}</small>
@@ -761,7 +780,7 @@ function vMore0() {
     <div class="sethead">App</div>
     <div class="card group"><h2>Install app</h2><p>${isStandalone() ? 'Installed. You are using the app version.' : installable ? 'Add ARTIME Stock to your home screen so it opens like a normal app.' : ios ? 'On iPhone: tap the Share button, then Add to Home Screen.' : 'Use your browser menu and choose Install app or Add to Home screen.'}</p>
       ${installable ? `<div class="btns"><button class="btn" data-act="install">${ic('download', 18)}Install</button></div>` : ''}</div>
-    <div class="card group"><h2>This phone</h2><div class="kv"><span>App version</span><b>v19</b></div><div class="kv"><span>Items cached</span><b>${S.items.length}</b></div><div class="kv"><span>Movements cached</span><b>${S.history.length}</b></div>
+    <div class="card group"><h2>This phone</h2><div class="kv"><span>App version</span><b>v20</b></div><div class="kv"><span>Items cached</span><b>${S.items.length}</b></div><div class="kv"><span>Movements cached</span><b>${S.history.length}</b></div>
       <div class="btns"><button class="btn ghost" data-act="refresh">${ic('refresh', 18)}Reload from sheet</button></div></div>`;
 }
 
@@ -917,16 +936,23 @@ function renderSheet() {
       <div class="dsec">Today at a glance</div>
       <div class="dtoday"><div class="g"><b>+${num(tin)}</b><small>In today</small></div><div class="r"><b>-${num(tout)}</b><small>Out today</small></div><div class="${al ? 'a' : ''}"><b>${al}</b><small>To reorder</small></div></div>
       <div class="dsec">Tools</div>
-      ${link('#/reorder', 'bell', 'Reorder List', al ? al + ' items to order' : 'Nothing to order')}
+      ${link('#/reorder', 'bell', 'Reorder List', al ? al + (al === 1 ? ' item' : ' items') + ' to order' : 'Nothing to order')}
       ${link('#/dial', 'gear', 'Dial Out', 'Make dials, choose the parts')}
-      ${link('#/pay?v=report', 'chart', 'Payments Report', 'Cash and bank totals')}
+      ${payFirst() ? link('#/stock', 'cube', 'Stock Overview', 'Items and alerts') : ''}
+      ${link('#/payreport', 'chart', 'Payments Report', 'Cash and bank totals')}
       <div class="dsec">Language</div>
       <div class="dlang">${langSeg()}</div>
       <div class="dsec">App</div>
       ${link('#/more', 'gear', 'Settings', 'Name, language, links, install')}
       ${S.installEvt && !isStandalone() ? `<button class="mi" data-act="install">${ic('download', 24)}<span><b>Install app</b><small>Opens full screen like a normal app</small></span></button>` : ''}
-      <div class="dfoot">${esc(APP_NAME)} &middot; v19</div>
+      <div class="dfoot">${esc(APP_NAME)} &middot; v20</div>
     </aside></div>`;
+    return;
+  }
+  if (s.type === 'payadd') {
+    el.innerHTML = `<div class="scrim" data-act="close"><div class="sheet" role="dialog" aria-label="New payment"><div class="grab"></div><h3>New payment</h3><div class="acts">
+      <a class="bigact in" href="#/pay?t=in">${ic('up', 34, 2.2)}<span><b>Payment In</b><small>Money received</small></span></a>
+      <a class="bigact out" href="#/pay?t=out">${ic('down', 34, 2.2)}<span><b>Payment Out</b><small>Money paid</small></span></a></div></div></div>`;
     return;
   }
   if (s.type === 'add') {
@@ -964,6 +990,7 @@ document.addEventListener('click', (ev) => {
     case 'refresh': refresh(); break;
     case 'lang': store.set('lang', v === 'hi' ? 'hi' : 'en'); document.documentElement.lang = lang(); render(); break;
     case 'add': S.sheet = { type: 'add' }; renderSheet(); break;
+    case 'payadd': S.sheet = { type: 'payadd' }; renderSheet(); break;
     case 'menu': S.sheet = { type: 'menu' }; renderSheet(); break;
     case 'close': if (ev.target === el) { S.sheet = null; renderSheet(); } break;
     case 'open-item': S.sheet = { type: 'item', code: el.dataset.code }; renderSheet(); break;
