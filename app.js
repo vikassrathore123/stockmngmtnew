@@ -181,7 +181,14 @@ const ST = {
   ok: { cls: 'ok', label: 'In Stock' },
   none: { cls: 'none', label: 'No Entries' }
 };
-const pill = (st) => `<span class="pill ${ST[st].cls}">${ST[st].label}</span>`;
+const pill = (st, code) => {
+  if (code && (st === 'low' || st === 'out')) {
+    const r = reorderedFor(code);
+    return r ? `<span class="pill rbtn done" role="button" data-r="${esc(code)}">Reordered ${num(r.qty)} · ${esc(dRel(r.date))}</span>`
+             : `<span class="pill ${ST[st].cls} rbtn" role="button" data-r="${esc(code)}">Reorder</span>`;
+  }
+  return `<span class="pill ${ST[st].cls}">${ST[st].label}</span>`;
+};
 
 /* ================= API ================= */
 async function apiGet() {
@@ -195,6 +202,9 @@ async function apiPost(body) {
 function applyData(j) {
   if (Array.isArray(j.items)) { S.items = j.items; store.set('items', S.items); }
   if (Array.isArray(j.history)) { S.history = j.history; store.set('history', S.history); }
+  if (Array.isArray(j.reorderSetup)) store.set('rsetup', j.reorderSetup);
+  if (j.reorderMessage) store.set('rmsg', j.reorderMessage);
+  if (Array.isArray(j.reorders)) store.set('rlog', j.reorders);
   S.synced = Date.now(); store.set('synced', S.synced);
   S.error = '';
 }
@@ -207,7 +217,7 @@ const errText = (e) => {
 
 async function refresh(quiet) {
   if (!S.url || S.loading) return;
-  if (S.queue.length) { await sync(true); return; }
+  if (S.queue.length || (store.get('rq', [])).length) { await sync(true); return; }
   S.loading = true; softRender();
   try {
     const j = await apiGet();
@@ -220,15 +230,17 @@ async function refresh(quiet) {
 }
 
 async function sync(quiet) {
-  if (S.syncing || !S.queue.length || !S.url) return;
+  if (S.syncing || (!S.queue.length && !(store.get('rq', [])).length) || !S.url) return;
   S.syncing = true; softRender();
   const batch = S.queue.slice();
   let okRun = false;
   try {
-    const j = await apiPost({ entries: batch.map(({ id, type, code, qty, date, party, ref, note }) => ({ id, type, code, qty, date, party, ref, note })) });
+    const j = await apiPost({ v: 2, reorders: store.get('rq', []), entries: batch.map(({ id, type, code, qty, date, party, ref, note }) => ({ id, type, code, qty, date, party, ref, note, by: store.get('by', '') || '-' })) });
     if (!j.ok) throw new Error(j.error || 'Sheet error');
     const res = {};
     (j.results || []).forEach((r) => { res[r.id] = r; });
+    const rdone = new Set((j.reorderResults || []).filter((r) => r.status !== undefined).map((r) => r.id));
+    if (rdone.size) store.set('rq', store.get('rq', []).filter((r) => !rdone.has(r.id)));
     const done = new Set();
     batch.forEach((e) => {
       const r = res[e.id];
@@ -357,9 +369,11 @@ function navHTML(name) {
 
 /* ---------- Settings: preference + payments link (payments code loads only when used) ---------- */
 function prefHTML() {
+  const byName = esc(store.get('by', ''));
   const pay = store.get('pref', 'stock') === 'pay', mu = store.get('money.url', '') || (window.APP_CONFIG && APP_CONFIG.moneyUrl) || '';
   const who = (() => { try { return (JSON.parse(localStorage.getItem('artime.money.user')) || {}).name || ''; } catch (e) { return ''; } })();
-  return `<div class="card prefcard"><b>Main button</b><small>Pick what you use most. It sits in the middle of the bar.</small>
+  return `<div class="card prefcard"><b>Your name</b><small>Saved on every stock entry and reorder you make.</small><input placeholder="Your name" value="${byName}" onchange="store.set('by', this.value.trim())"></div>
+    <div class="card prefcard"><b>Main button</b><small>Pick what you use most. It sits in the middle of the bar.</small>
     <div class="seg"><button class="${pay ? '' : 'on'}" data-m="pref" data-v="stock">Stock <i class="dot b"></i></button><button class="${pay ? 'on g' : ''}" data-m="pref" data-v="pay">Payments <i class="dot g"></i></button></div></div>
     <div class="card prefcard"><b>Payments</b><small>${who ? 'Logged in as ' + esc(who) : 'Not logged in'}${mu ? ' · sheet connected' : ' · no sheet link yet'}</small>
     <input id="murl" placeholder="Payments Google Sheet link" value="${mu ? esc(mu.slice(0, 40)) + '…' : ''}" onfocus="this.value=''">
@@ -425,7 +439,7 @@ function vHome() {
 function itemRow(i) {
   return `<button class="row" data-act="open-item" data-code="${esc(i.code)}">${art(i.base, 56)}
     <span class="mid"><b>${esc(i.title)}</b><small>${esc(i.code)}</small></span>
-    <span class="pillcol">${pill(i.st)}</span>
+    <span class="pillcol">${pill(i.st, i.code)}</span>
     <span class="end"><b>${num(i.eff)}</b><small>${esc(unitLabel(i.unit))}</small></span></button>`;
 }
 function actRow(e, nm) {
@@ -725,7 +739,7 @@ function renderSheet() {
   const nm = {}; items().forEach((i) => { nm[i.code] = i.title; });
   const mv = sortMoves(moves().filter((e) => e.code === it.code)).slice(0, 6);
   el.innerHTML = `<div class="scrim" data-act="close"><div class="sheet" role="dialog" aria-label="${esc(it.title)}"><div class="grab"></div>
-    <div class="hd">${art(it.base, 64)}<div style="flex:1;min-width:0"><b>${esc(it.title)}</b><small>${esc(it.code)}</small></div>${pill(it.st)}</div>
+    <div class="hd">${art(it.base, 64)}<div style="flex:1;min-width:0"><b>${esc(it.title)}</b><small>${esc(it.code)}</small></div>${pill(it.st, it.code)}</div>
     <div class="nums"><div><small>Current Stock</small><b>${num(it.eff)}</b></div><div><small>Reorder Level</small><b>${num(it.min)}</b></div><div><small>Unit</small><b style="font-size:17px;line-height:2">${esc(unitLabel(it.unit))}</b></div></div>
     ${isDial(it.code) ? `<div class="two" style="margin-top:0"><a class="bigact dial" style="padding:14px" href="#/dial?code=${encodeURIComponent(it.code)}">${ic('gear', 26, 2.2)}<b style="font-size:17px">Dial Out</b></a></div>` : `<div class="two" style="margin-top:0"><a class="bigact in" style="padding:14px" href="#/in?code=${encodeURIComponent(it.code)}">${ic('up', 26, 2.2)}<b style="font-size:17px">Stock In</b></a><a class="bigact out" style="padding:14px" href="#/out?code=${encodeURIComponent(it.code)}">${ic('down', 26, 2.2)}<b style="font-size:17px">Stock Out</b></a></div>`}
     <h4>Recent movements</h4>${mv.length ? mv.map((e) => actRow(e, nm)).join('') : '<div class="empty" style="padding:14px">No movements for this item yet.</div>'}</div></div>`;
@@ -889,3 +903,50 @@ onRoute();
 lastVis = Date.now();
 if (S.queue.length) sync(true); else refresh(true);
 })();
+
+/* ================= Reorder (button on low / out items -> WhatsApp) ================= */
+function reorderedFor(code) {
+  const all = store.get('rlog', []).concat(store.get('rq', []).map((r) => ({ code: r.code, qty: r.qty, date: r.date })));
+  const mine = all.filter((r) => r.code === code).sort((x, y) => (x.date < y.date ? 1 : -1))[0];
+  if (!mine) return null;
+  const arrived = S.history.concat(S.queue).some((e) => e.type === 'in' && e.code === code && e.date >= mine.date);
+  return arrived ? null : mine;                      // a Stock In after the reorder clears the mark
+}
+const waNum = (p) => { let d = String(p || '').replace(/\D/g, '').replace(/^0+/, ''); return d.length === 10 ? '91' + d : d; };
+function rsMsg(it, row, qty) {
+  const t = (row && row.msg) || store.get('rmsg', 'Hello {supplier}, please send {item} - {qty} {unit}. - ARTIME');
+  const v = { supplier: (row && row.supplier) || '', item: (row && row.sname) || it.title, qty: qty, unit: String(unitLabel(it.unit)).toLowerCase(), stock: it.eff, date: dRel(today()) };
+  return t.replace(/\{(\w+)\}/g, (m, k) => (k in v ? v[k] : m));
+}
+function openReorder(code) {
+  const it = items().find((i) => i.code === code); if (!it) return;
+  const row = store.get('rsetup', []).find((r) => r.code === code) || null;
+  const q0 = (row && row.qty) || Math.max(1, Math.round(it.min * 2 - it.eff));
+  let el = document.getElementById('rs'); if (!el) { el = document.createElement('div'); el.id = 'rs'; document.body.appendChild(el); }
+  el.innerHTML = `<div class="rsb" data-rx="close"><div class="rsc" onclick="event.stopPropagation()"><div class="grab"></div>
+    <h3>Reorder ${esc(it.title)}</h3><small>${esc(it.code)} · Stock ${num(it.eff)} ${esc(unitLabel(it.unit))} · Min ${num(it.min)}</small>
+    <p class="rsup">${row && row.phone ? 'To: <b>' + esc(row.supplier || 'Supplier') + '</b> (' + esc(row.phone) + ')' : '<span class="r">No supplier number yet. Add it in the Reorder Setup sheet. You can still pick a contact in WhatsApp.</span>'}</p>
+    <label>Quantity</label><input id="rqty" type="number" inputmode="decimal" value="${q0}">
+    <label>Message</label><textarea id="rtxt" rows="4">${esc(rsMsg(it, row, q0))}</textarea>
+    <button class="go" data-rx="send" data-code="${esc(code)}">Send on WhatsApp</button><button class="rcancel" data-rx="close">Cancel</button></div></div>`;
+  document.getElementById('rqty').addEventListener('input', (e) => { document.getElementById('rtxt').value = rsMsg(it, row, e.target.value); });
+}
+document.addEventListener('click', (ev) => {
+  try {
+    const r = ev.target.closest('[data-r]'), x = ev.target.closest('[data-rx]');
+    if (r) { ev.stopPropagation(); ev.preventDefault(); openReorder(r.dataset.r); return; }
+    if (!x) return;
+    ev.stopPropagation();
+    const el = document.getElementById('rs');
+    if (x.dataset.rx === 'close') { if (el) el.remove(); return; }
+    if (x.dataset.rx === 'send') {
+      const code = x.dataset.code, qty = parseFloat(document.getElementById('rqty').value);
+      if (!(qty > 0)) { toast('Enter a quantity', true); return; }
+      const row = store.get('rsetup', []).find((q) => q.code === code) || {}, text = document.getElementById('rtxt').value;
+      store.set('rq', store.get('rq', []).concat([{ id: 'R' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), code, qty, date: today(), supplier: row.supplier || '', phone: row.phone || '', by: store.get('by', '') || '-' }]));
+      if (el) el.remove();
+      window.open('https://wa.me/' + waNum(row.phone) + '?text=' + encodeURIComponent(text), '_blank');
+      sync(true); render();
+    }
+  } catch (e) { toast('Reorder had a problem. Nothing was lost.', true); }
+}, true);
