@@ -108,7 +108,7 @@ const HI = {
   'This phone': 'यह फ़ोन', 'Items cached': 'सेव किए आइटम', 'Movements cached': 'सेव किए लेन-देन', 'Reload from sheet': 'शीट से दोबारा लोड करें', 'App version': 'ऐप वर्ज़न', 'About': 'जानकारी',
   /* payments */
   'Payments had a problem': 'भुगतान में दिक्कत आई', 'Retry': 'फिर कोशिश करें', 'No payments sheet link yet': 'अभी भुगतान शीट का लिंक नहीं', 'Add the Payments Google Sheet link in Settings.': 'सेटिंग्स में भुगतान Google Sheet का लिंक जोड़ें।',
-  'Open Settings': 'सेटिंग्स खोलें', 'Enter your PIN': 'अपना PIN डालें', 'Only the first time on this phone.': 'इस फ़ोन पर सिर्फ़ पहली बार।', 'PIN': 'PIN', 'Continue': 'आगे बढ़ें',
+  'Open Settings': 'सेटिंग्स खोलें', 'Enter your PIN': 'अपना PIN डालें', 'Test connection': 'कनेक्शन जाँचें', 'Payments sheet is reachable ✓': 'भुगतान शीट से कनेक्शन ठीक है ✓', 'Not reachable': 'पहुँच नहीं सके', 'Only the first time on this phone.': 'इस फ़ोन पर सिर्फ़ पहली बार।', 'PIN': 'PIN', 'Continue': 'आगे बढ़ें',
   'Cash and bank entries': 'नकद और बैंक की एंट्री', 'Received': 'मिला', 'Paid': 'दिया', 'Amount': 'राशि', 'Cash or bank': 'नकद या बैंक', 'Cash': 'नकद', 'Bank': 'बैंक', 'Which bank': 'कौन सा बैंक', 'Bank name': 'बैंक का नाम',
   'Party / name': 'पार्टी / नाम', 'Who paid or who was paid': 'किसने दिया या किसे दिया', 'Add note...': 'नोट लिखें...', 'Save Received': 'मिला हुआ सेव करें', 'Save Paid': 'दिया हुआ सेव करें',
   'All synced ✓': 'सब सिंक हो गया ✓', 'waiting': 'रुका है', 'held': 'होल्ड पर', 'saved': 'सेव', 'Syncing…': 'सिंक हो रहा है…', 'Delete': 'मिटाएँ',
@@ -125,6 +125,9 @@ const HI = {
 };
 const trAge = (s) => s.replace(/^just now$/, 'अभी').replace(/^(\d+) min ago$/, '$1 मिनट पहले').replace(/^(\d+) h ago$/, '$1 घंटे पहले');
 const HI_RULES = [
+  [/^Checking… (\d+)s$/, (m) => 'जाँच हो रही है… ' + m[1] + ' सेकंड'],
+  [/^No connection \((.*)\)\. Check the internet and the Payments link, then try again\.$/, (m) => 'कनेक्शन नहीं है (' + m[1] + ')। इंटरनेट और भुगतान लिंक जाँचें, फिर कोशिश करें।'],
+  [/^The Payments link returned an error \(HTTP (\d+)\)\..*$/, (m) => 'भुगतान लिंक ने एरर दिया (HTTP ' + m[1] + ')। डिप्लॉयमेंट जाँचें: Execute as Me, access Anyone।'],
   [/^Welcome (.+)$/, (m) => 'स्वागत है ' + m[1]],
   [/^(Today|Yesterday)(, .*)?$/, (m) => T(m[1]) + (m[2] || '')],
   [/^(\d+) min ago$/, (m) => m[1] + ' मिनट पहले'],
@@ -758,7 +761,7 @@ function vMore0() {
     <div class="sethead">App</div>
     <div class="card group"><h2>Install app</h2><p>${isStandalone() ? 'Installed. You are using the app version.' : installable ? 'Add ARTIME Stock to your home screen so it opens like a normal app.' : ios ? 'On iPhone: tap the Share button, then Add to Home Screen.' : 'Use your browser menu and choose Install app or Add to Home screen.'}</p>
       ${installable ? `<div class="btns"><button class="btn" data-act="install">${ic('download', 18)}Install</button></div>` : ''}</div>
-    <div class="card group"><h2>This phone</h2><div class="kv"><span>App version</span><b>v18</b></div><div class="kv"><span>Items cached</span><b>${S.items.length}</b></div><div class="kv"><span>Movements cached</span><b>${S.history.length}</b></div>
+    <div class="card group"><h2>This phone</h2><div class="kv"><span>App version</span><b>v19</b></div><div class="kv"><span>Items cached</span><b>${S.items.length}</b></div><div class="kv"><span>Movements cached</span><b>${S.history.length}</b></div>
       <div class="btns"><button class="btn ghost" data-act="refresh">${ic('refresh', 18)}Reload from sheet</button></div></div>`;
 }
 
@@ -922,7 +925,7 @@ function renderSheet() {
       <div class="dsec">App</div>
       ${link('#/more', 'gear', 'Settings', 'Name, language, links, install')}
       ${S.installEvt && !isStandalone() ? `<button class="mi" data-act="install">${ic('download', 24)}<span><b>Install app</b><small>Opens full screen like a normal app</small></span></button>` : ''}
-      <div class="dfoot">${esc(APP_NAME)} &middot; v18</div>
+      <div class="dfoot">${esc(APP_NAME)} &middot; v19</div>
     </aside></div>`;
     return;
   }
