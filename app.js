@@ -378,10 +378,11 @@ function navHTML(name) {
 
 /* ---------- Settings: preference + payments link (payments code loads only when used) ---------- */
 function prefHTML() {
-  const byName = esc(store.get('by', ''));
+  syncName();
+  const byName = esc(store.get('by', '')), locked = !!payName();
   const pay = store.get('pref', 'stock') === 'pay', mu = store.get('money.url', '') || (window.APP_CONFIG && APP_CONFIG.moneyUrl) || '';
   const who = (() => { try { return (JSON.parse(localStorage.getItem('artime.money.user')) || {}).name || ''; } catch (e) { return ''; } })();
-  return `<div class="card prefcard"><b>Your name</b><small>Saved on every stock entry and reorder you make.</small><input placeholder="Your name" value="${byName}" onchange="store.set('by', this.value.trim())"></div>
+  return `<div class="card prefcard"><b>Your name</b><small>${locked ? 'Taken automatically from your Payments login. Log out of Payments to change it.' : 'Saved on every stock entry and reorder you make. Log in to Payments and it fills in by itself.'}</small><input placeholder="Your name" value="${byName}"${locked ? ' readonly' : ''} onchange="store.set('by', this.value.trim())"></div>
     <div class="card prefcard"><b>Main button</b><small>Pick what you use most. It sits in the middle of the bar.</small>
     <div class="seg"><button class="${pay ? '' : 'on'}" data-m="pref" data-v="stock">Stock <i class="dot b"></i></button><button class="${pay ? 'on g' : ''}" data-m="pref" data-v="pay">Payments <i class="dot g"></i></button></div></div>
     <div class="card prefcard"><b>Payments</b><small>${who ? 'Logged in as ' + esc(who) : 'Not logged in'}${mu ? ' · sheet connected' : ' · no sheet link yet'}</small>
@@ -582,7 +583,7 @@ function vMore0() {
     ${f.length ? `<div class="card group"><h2>Not saved</h2><p>The sheet rejected these entries. Fix the cause, then enter them again.</p>${f.map((e) => ent(e, 'discard-failed')).join('')}</div>` : ''}
     <div class="card group"><h2>Install app</h2><p>${isStandalone() ? 'Installed. You are using the app version.' : installable ? 'Add ARTIME Stock to your home screen so it opens like a normal app.' : ios ? 'On iPhone: tap the Share button, then Add to Home Screen.' : 'Use your browser menu and choose Install app or Add to Home screen.'}</p>
       ${installable ? `<div class="btns"><button class="btn" data-act="install">${ic('download', 18)}Install</button></div>` : ''}</div>
-    <div class="card group"><h2>This phone</h2><div class="kv"><span>App version</span><b>v14</b></div><div class="kv"><span>Items cached</span><b>${S.items.length}</b></div><div class="kv"><span>Movements cached</span><b>${S.history.length}</b></div>
+    <div class="card group"><h2>This phone</h2><div class="kv"><span>App version</span><b>v15</b></div><div class="kv"><span>Items cached</span><b>${S.items.length}</b></div><div class="kv"><span>Movements cached</span><b>${S.history.length}</b></div>
       <div class="btns"><button class="btn ghost" data-act="refresh">${ic('refresh', 18)}Reload from sheet</button></div></div>`;
 }
 
@@ -714,7 +715,11 @@ function showPopup(p) {
 function closePopup() { clearTimeout(popT); $('#popup').innerHTML = ''; S.busy = false; }
 
 /* ---------- sheets ---------- */
+function payName() { try { return String((JSON.parse(localStorage.getItem('artime.money.user')) || {}).name || '').trim(); } catch (e) { return ''; } }
+function syncName() { const n = payName(); if (n && store.get('by', '') !== n) store.set('by', n); }   // Payments login name becomes the Stock name too
+window.ARTIME_syncName = syncName;
 function who() {
+  syncName();
   let n = String(store.get('by', '') || '').trim();
   if (!n) { try { n = String((JSON.parse(localStorage.getItem('artime.money.user')) || {}).name || '').trim(); } catch (e) { /* ignore */ } }
   return n;
@@ -916,6 +921,7 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadSW && !reloaded) { reloaded = true; location.reload(); } });
   window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
 }
+syncName();
 onRoute();
 lastVis = Date.now();
 if (S.queue.length) sync(true); else refresh(true);
