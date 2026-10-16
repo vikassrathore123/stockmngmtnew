@@ -73,6 +73,8 @@ const P = {
   refresh: '<path d="M20 11a8 8 0 00-14.5-3.5L4 9"/><path d="M4 4v5h5"/><path d="M4 13a8 8 0 0014.5 3.5L20 15"/><path d="M20 20v-5h-5"/>',
   check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
   x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  cash: '<rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.8"/><path d="M6 9.5v.01M18 14.5v.01"/>',
+  bank: '<path d="M3 9.5L12 4l9 5.5z"/><path d="M5.5 11v7M10 11v7M14 11v7M18.5 11v7"/><path d="M3 20.5h18"/>',
   download: '<path d="M12 4v11"/><path d="M7 11l5 5 5-5"/><path d="M4 20h16"/>'
 };
 const ic = (n, s = 22, sw = 1.9) => `<svg class="ic ${n === 'chev' || n === 'right' ? 'chev' : ''}" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n] || ''}</svg>`;
@@ -134,7 +136,9 @@ const S = {
   busy: false,
   installEvt: null
 };
-window.store = store;   // Settings uses it from an inline onchange
+window.store = store;
+window.ARTIME_ic = (n, z) => ic(n, z);
+window.ARTIME_toast = (m, b) => toast(m, b);   // Settings uses it from an inline onchange
 const saveQueue = () => { store.set('queue', S.queue); store.set('failed', S.failed); };
 
 /* ================= data model ================= */
@@ -303,17 +307,20 @@ function render() {
     case 'categories': top = topPlain('Categories', 'Manage item categories', true); body = vCategories(); break;
     case 'reports': top = topPlain('Reports', 'Stock movement over time'); body = vReports(); break;
     case 'more': top = topPlain('Settings'); body = vMore(); break;
+    case 'pay': top = topPlain('Payments', 'Cash and bank entries'); body = '<div id="money"></div>'; break;
     default: top = topHome(); body = vHome();
   }
   app.innerHTML = top + body;
   $('#nav').innerHTML = isForm ? '' : navHTML(r.name);
   renderSheet();
   if (isForm) updateFormDynamic();
+  if (r.name === 'pay') withMoney(() => window.Money.mount());
 }
 // refresh without clobbering what the person is typing
 function softRender() {
   const r = route();
   const ae = document.activeElement;
+  if (r.name === 'pay') return;           // Payments draws and refreshes itself
   if (isFormRoute(r.name)) { updateFormDynamic(); return; }
   if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'SELECT')) { if (r.name === 'items') renderItemList(); return; }
   render();
@@ -359,9 +366,9 @@ function navHTML(name) {
   const on = (n) => (n === name || (n === 'items' && name === 'categories') ? 'on' : '');
   const pay = store.get('pref', 'stock') === 'pay';
   const stockFab = `<span class="fabwrap"><button class="fab" data-act="add" aria-label="Add stock entry">${ic('plus', 30, 2.4)}</button></span>`;
-  const payFab = `<span class="fabwrap"><button class="fab pay" data-m="open" aria-label="Payments">${ic('plus', 30, 2.4)}</button></span>`;
+  const payFab = `<span class="fabwrap"><a class="fab pay" href="#/pay" aria-label="Payments">${ic('plus', 30, 2.4)}</a></span>`;
   const stockTab = `<button class="n" data-act="add">${ic('up', 26)}Stock</button>`;
-  const payTab = `<button class="n paytab" data-m="open">${ic('plus', 26)}Payments</button>`;
+  const payTab = `<a class="n paytab ${on('pay')}" href="#/pay">${ic('cash', 26)}Payments</a>`;
   return `<a class="n ${on('home')}" href="#/home">${ic('home', 26)}Home</a>
     <a class="n ${on('items')}" href="#/items">${ic('cube', 26)}Items</a>
     ${pay ? payFab : stockFab}
@@ -707,6 +714,11 @@ function showPopup(p) {
 function closePopup() { clearTimeout(popT); $('#popup').innerHTML = ''; S.busy = false; }
 
 /* ---------- sheets ---------- */
+function who() {
+  let n = String(store.get('by', '') || '').trim();
+  if (!n) { try { n = String((JSON.parse(localStorage.getItem('artime.money.user')) || {}).name || '').trim(); } catch (e) { /* ignore */ } }
+  return n;
+}
 function renderSheet() {
   const el = $('#sheet'); const s = S.sheet;
   if (!s) { el.innerHTML = ''; return; }
@@ -714,8 +726,9 @@ function renderSheet() {
     const link = (href, icon, title, sub) => `<a class="mi" href="${href}">${ic(icon, 24)}<span><b>${title}</b><small>${sub}</small></span>${ic('right', 18)}</a>`;
     const al = items().filter((i) => i.st === 'out' || i.st === 'low').length;
     el.innerHTML = `<div class="scrim side" data-act="close"><aside class="drawer" role="dialog" aria-label="Menu">
-      <div class="dh"><b>${esc(APP_NAME)}</b><small>${esc(TAGLINE)}</small></div>
+      <div class="dh"><span class="av">${esc((who() || '?')[0].toUpperCase())}</span><div class="dn">${who() ? `<b>${esc(who())}</b>` : '<a href="#/more"><b>Add your name</b></a>'}<small>${esc(APP_NAME)} &middot; ${esc(TAGLINE)}</small></div></div>
       <div class="dsec">Quick actions</div>
+      ${link('#/pay', 'cash', 'Payments', 'Cash and bank, received or paid')}
       ${link('#/dial', 'gear', 'Dial Out', 'Make dials, choose the parts')}
       ${link('#/in', 'up', 'Stock In', 'Add incoming stock')}
       ${link('#/out', 'down', 'Stock Out', 'Record outgoing stock')}
