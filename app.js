@@ -918,8 +918,12 @@ function reorderedFor(code) {
 const waNum = (p) => { let d = String(p || '').replace(/\D/g, '').replace(/^0+/, ''); return d.length === 10 ? '91' + d : d; };
 function rsMsg(it, row, qty) {
   const t = (row && row.msg) || store.get('rmsg', 'Hello {supplier}, please send {item} - {qty} {unit}. - ARTIME');
-  const v = { supplier: (row && row.supplier) || '', item: (row && row.sname) || it.title, qty: qty, unit: String(unitLabel(it.unit)).toLowerCase(), stock: it.eff, date: dRel(today()) };
-  return t.replace(/\{(\w+)\}/g, (m, k) => (k in v ? v[k] : m));
+  const unit = String(unitLabel(it.unit)).toLowerCase();
+  const v = { supplier: (row && row.supplier) || '', item: (row && row.sname) || it.title, qty: qty, quantity: qty, unit: unit, units: unit, stock: it.eff, date: dRel(today()) };
+  let hasQty = false;
+  let out = t.replace(/\{\s*(\w+)\s*\}/g, (m, k) => { k = k.toLowerCase(); if (k === 'qty' || k === 'quantity') hasQty = true; return k in v ? v[k] : m; });
+  if (!hasQty) out = out.replace(/\s+$/, '') + ' Quantity: ' + qty + ' ' + unit;     // message in the sheet has no {qty}: always add the quantity
+  return out;
 }
 const rowFor = (code) => store.get('rsetup', []).find((r) => String(r.code).trim().toUpperCase() === String(code).trim().toUpperCase()) || null;
 function openReorder(code, fresh, note) {
