@@ -414,18 +414,10 @@ a { color: inherit; text-decoration: none; }
 #nav button.n { background: none; border: 0; font-size: 13px; color: #6b7788; }
 .prefcard { display: grid; gap: 10px; margin: 12px 16px; padding: 16px; }
 .prefcard small { color: #6b7788; }
-.prefcard input, #money input, #money select { width: 100%; padding: 12px; border: 1px solid #d5dbe5; border-radius: 12px; font: inherit; background: #fff; }
+.prefcard input { width: 100%; padding: 12px; border: 1px solid #d5dbe5; border-radius: 12px; font: inherit; background: #fff; }
 .seg { display: flex; gap: 8px; } .seg button { flex: 1; padding: 12px; border-radius: 12px; border: 1.5px solid #d5dbe5; background: #fff; font: inherit; font-weight: 600; }
 .seg button.on { border-color: var(--blue); color: var(--blue); } .seg button.on.g { border-color: var(--green); color: var(--green); }
 .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-left: 4px; } .dot.b { background: var(--blue); } .dot.g { background: var(--green); }
-#money { position: fixed; inset: 0; z-index: 60; background: #f3f5f9; overflow-y: auto; padding: max(16px, env(safe-area-inset-top)) 16px 90px; }
-#money h2 { margin: 6px 0 14px; display: flex; justify-content: space-between; align-items: center; }
-#money .mc { background: #fff; border-radius: 16px; padding: 16px; margin-bottom: 12px; display: grid; gap: 10px; }
-#money .go { background: var(--green); color: #fff; border: 0; border-radius: 14px; padding: 15px; font: inherit; font-weight: 700; font-size: 17px; }
-#money .x { background: none; border: 0; font-size: 26px; } #money .err { color: #b91c1c; } #money .row { display: flex; justify-content: space-between; gap: 8px; padding: 8px 0; border-top: 1px solid #eef1f6; }
-#money .pill { font-size: 12px; padding: 2px 8px; border-radius: 99px; background: #e8f7ee; color: var(--green); } #money .pill.w { background: #fff4db; color: #a16207; }
-#money .tg { display: flex; gap: 8px; } #money .tg button { flex: 1; padding: 13px; border-radius: 12px; border: 1.5px solid #d5dbe5; background: #fff; font: inherit; font-weight: 700; }
-#money .tg .on.in { border-color: var(--green); color: var(--green); } #money .tg .on.out { border-color: #dc2626; color: #dc2626; }
 
 /* ---- reorder ---- */
 .pill.rbtn { cursor: pointer; background: var(--blue); color: #fff; } .pill.rbtn.done { background: #e0ecff; color: var(--blue); }
@@ -435,3 +427,27 @@ a { color: inherit; text-decoration: none; }
 .rsc input, .rsc textarea { width: 100%; padding: 12px; border: 1px solid #d5dbe5; border-radius: 12px; font: inherit; }
 .rsc .go { background: #16a34a; color: #fff; border: 0; border-radius: 14px; padding: 15px; font: inherit; font-weight: 700; font-size: 17px; }
 .rsc .rcancel { background: none; border: 0; padding: 10px; font: inherit; color: #6b7788; }
+
+/* ---- payments page (inside the app) ---- */
+.form.pay { --accent: var(--green); --accent-t: var(--green-t); --accent-b: #b9e5d3; }
+.form.pay .tab.pd.on { background: var(--red-t); border-color: #f6b9b9; color: var(--red); }
+.form.pay .tab.md.on { background: var(--blue-t); border-color: #b8d0ff; color: var(--blue); }
+.form.pay .submit.out { background: var(--red); }
+.form.pay .rup { font-size: 20px; color: var(--mute); }
+.form.pay .field input[type=date] { appearance: auto; -webkit-appearance: auto; }
+.pmwho { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; color: var(--mute); font-size: 14px; }
+.pmwho b { color: var(--ink); } .pmwho button { color: var(--red); font-weight: 600; padding: 6px 4px; }
+.pmrow { display: flex; align-items: center; gap: 12px; padding: 10px 0; }
+.pmrow + .pmrow { border-top: 1px solid var(--line); }
+.pmi { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 20px; flex: none; }
+.pmi.in { background: var(--green-t); color: var(--green); } .pmi.out { background: var(--red-t); color: var(--red); }
+.pmm { flex: 1; min-width: 0; } .pmm b { display: block; } .pmm small { color: var(--mute); }
+.pmtag { font-size: 12px; padding: 3px 9px; border-radius: 99px; background: var(--green-t); color: var(--green); font-weight: 600; }
+.pmtag.w { background: var(--amber-t); color: var(--amber); }
+#money { padding-bottom: 8px; }
+#nav .paytab.on { color: var(--green); font-weight: 600; }
+/* ---- side menu: name on top ---- */
+.drawer .dh { display: flex; align-items: center; gap: 14px; }
+.drawer .dh .av { width: 48px; height: 48px; border-radius: 50%; background: var(--blue); color: #fff; display: grid; place-items: center; font-size: 22px; font-weight: 800; flex: none; }
+.drawer .dh .dn { min-width: 0; } .drawer .dh .dn b { font-size: 20px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.drawer .dh .dn a b { color: var(--blue); }
