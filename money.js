@@ -199,7 +199,7 @@
       else if (a === 'pin') {
         const pin = ($('#mpin') || {}).value; if (!pin) return; M.msg = 'Checking…'; draw();
         post({ action: 'login', pin, dev }).then((j) => {
-          if (j.ok) { M.user = { name: j.name, bank: j.bank || '', admin: !!j.admin }; M.pin = pin; M.msg = ''; keep(); sync(); }
+          if (j.ok) { M.user = { name: j.name, bank: j.bank || '', admin: !!j.admin }; M.pin = pin; M.msg = ''; keep(); try { window.store.set('by', j.name); } catch (e) { /* ignore */ } sync(); }
           else M.msg = j.net ? 'No connection. Try again.' : (j.error || 'Wrong PIN');
           draw();
         });
