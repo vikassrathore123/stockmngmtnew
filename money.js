@@ -140,7 +140,8 @@
     if (!M.pin) { drawReport(); drawDash(); return; }
     if (!force && M.rep && M.rep.user === M.user.name && Date.now() - (M.repAt || 0) < 60000) { drawReport(); drawDash(); return; }
     if (!navigator.onLine) { drawReport(); drawDash(); return; }
-    M.repBusy = true; M.repErr = ''; drawReport(); drawDash();
+    if (!force && Date.now() - (M.repTry || 0) < 60000) { drawReport(); drawDash(); return; }    // failed or tried a moment ago: wait
+    M.repTry = Date.now(); M.repBusy = true; M.repErr = ''; drawReport(); drawDash();
     const j = await post({ action: 'report', pin: M.pin, dev });
     M.repBusy = false;
     if (j.ok && Array.isArray(j.rows)) { M.rep = j; M.repAt = Date.now(); s('rep', j); }
@@ -365,6 +366,11 @@
     if (ev.target && ev.target.id === 'm-rq') { M.rq = ev.target.value; const B = repBase(), l = $('#m-replist'); if (B && l) { l.innerHTML = listHTML(B.base, B.R.scope); const n = $('#m-repcnt'); if (n) n.textContent = listRows(B.base).length; } return; } if (ev.target && ev.target.id === 'm-bank') { M.bank = ev.target.value; flip('#money [data-m="bank"]', M.bank); } });
   window.addEventListener('online', () => later(500));
   window.Money = { act, boot: () => later(800), mount: (view, t) => { M.msg = ''; M.view = view === 'report' ? 'report' : 'entry'; if (t === 'in' || t === 'out') { M.type = t; s('type', t); } draw(); sync(); },
-    warm: () => { if (M.user && M.pin && !M.repBusy && navigator.onLine && (!M.rep || Date.now() - (M.repAt || 0) > 300000)) loadReport(true).then(() => { if (window.ARTIME_render && /^#?\/?(home)?$/.test(location.hash)) window.ARTIME_render(); }); },
+    warm: () => {                          // quietly fills Home's payments card; at most once per 5 minutes, never loops
+      if (!M.user || !M.pin || M.repBusy || !navigator.onLine || Date.now() - (M.repTry || 0) < 300000) return;
+      if (M.rep && M.rep.user === M.user.name && Date.now() - (M.repAt || 0) < 300000) return;
+      const before = M.repAt || 0;
+      loadReport(true).then(() => { if ((M.repAt || 0) > before && window.ARTIME_render && /^#?\/?(home)?$/.test(location.hash)) window.ARTIME_render(); });
+    },
     dash: () => { M.msg = ''; drawDash(); loadReport(); sync(); } };
 })();
