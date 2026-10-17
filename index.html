@@ -21,6 +21,34 @@
   <div id="sheet"></div>
   <div id="popup"></div>
   <div id="toast" role="status" aria-live="polite"></div>
+  <script>
+    /* Safety net: if the app cannot start, show why instead of a blank page. */
+    (function () {
+      var errs = [];
+      function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+      window.addEventListener('error', function (e) {
+        var t = e.target;
+        if (t && t.tagName === 'SCRIPT') errs.push('Could not load ' + String(t.src || '').split('/').pop());
+        else errs.push((e.message || 'Error') + (e.filename ? ' (' + String(e.filename).split('/').pop() + ':' + e.lineno + ')' : ''));
+      }, true);
+      window.artimeFix = function () {
+        var jobs = [];
+        if (navigator.serviceWorker) jobs.push(navigator.serviceWorker.getRegistrations().then(function (r) { return Promise.all(r.map(function (x) { return x.unregister(); })); }));
+        if (window.caches) jobs.push(caches.keys().then(function (k) { return Promise.all(k.map(function (x) { return caches.delete(x); })); }));
+        Promise.all(jobs).catch(function () {}).then(function () { location.replace(location.pathname + '?fresh=' + Date.now()); });   // saved entries are not touched
+      };
+      setTimeout(function () {
+        var a = document.getElementById('app');
+        if (a && !a.innerHTML.trim()) {
+          a.innerHTML = '<div style="max-width:520px;margin:40px auto;padding:20px;font-family:system-ui,sans-serif;color:#0f172a">' +
+            '<h2 style="margin:0 0 8px">ARTIME could not start</h2>' +
+            '<p style="color:#475569;margin:0 0 12px">Your saved entries are safe. Tap the button to load the newest app files.</p>' +
+            '<p style="background:#fef2f2;color:#b91c1c;padding:10px 12px;border-radius:10px;font-size:14px;word-break:break-word">' + esc(errs.length ? errs.join(' | ') : 'The app did not draw anything.') + '</p>' +
+            '<button onclick="artimeFix()" style="background:#1f5fe6;color:#fff;border:0;border-radius:12px;padding:14px 18px;font-size:16px;font-weight:600;width:100%">Load newest files</button></div>';
+        }
+      }, 4000);
+    })();
+  </script>
   <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
