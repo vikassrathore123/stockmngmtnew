@@ -93,6 +93,8 @@ const HI = {
   'Payments today': 'आज के भुगतान', 'Record money in or out': 'पैसा आया या गया दर्ज करें', 'Share summary': 'सारांश शेयर करें', 'Download Excel (CSV)': 'Excel (CSV) डाउनलोड करें', 'Dials made': 'बने डायल', 'Most received': 'सबसे ज़्यादा आया',
   'Nothing here': 'यहाँ कुछ नहीं', 'No entries in this period.': 'इस अवधि में कोई एंट्री नहीं।', 'Search item, supplier or note': 'आइटम, सप्लायर या नोट खोजें', 'Search party, bank or note': 'पार्टी, बैंक या नोट खोजें',
   'Save Payment In': 'पैसा आया सेव करें', 'Save Payment Out': 'पैसा गया सेव करें', 'Clear': 'हटाएँ', 'All accounts': 'सभी खाते', 'Day by day': 'दिन-दिन का हिसाब', 'Top parties': 'मुख्य पार्टियाँ', 'Compared with yesterday': 'कल से तुलना', 'Compared with the period before': 'पिछली अवधि से तुलना',
+  'Order all': 'सब ऑर्डर करें', 'Tick the items and set the quantities': 'आइटम चुनें और मात्रा डालें', 'Tick at least one item': 'कम से कम एक आइटम चुनें', 'Include': 'शामिल करें',
+  'App update': 'ऐप अपडेट', 'Update to latest version': 'नए वर्ज़न पर अपडेट करें', 'Clear cache and reload': 'कैश साफ़ करके दोबारा खोलें', 'Could not check. Check your internet and try again.': 'जाँच नहीं हो सकी। इंटरनेट जाँचकर फिर कोशिश करें।', 'Money in hand': 'हाथ में पैसा', 'Last 7 days': 'पिछले 7 दिन',
   'Payment In': 'पैसा आया', 'Payment Out': 'पैसा गया', 'Money received': 'मिला हुआ पैसा', 'Money paid': 'दिया हुआ पैसा', 'New payment': 'नया भुगतान',
   'Stock Overview': 'स्टॉक की स्थिति', 'Items and alerts': 'आइटम और अलर्ट', 'Items that are low or out of stock': 'जो आइटम कम या खत्म हैं', 'Received today': 'आज मिला', 'Paid today': 'आज दिया', 'Net today': 'आज का नेट',
   'Recent payments': 'हाल के भुगतान', 'Full report': 'पूरी रिपोर्ट', 'Log in to see payments': 'भुगतान देखने के लिए लॉगिन करें', 'Enter PIN': 'PIN डालें', 'Enter PIN to load totals': 'हिसाब लोड करने के लिए PIN डालें',
@@ -132,6 +134,14 @@ const HI = {
 };
 const trAge = (s) => s.replace(/^just now$/, 'अभी').replace(/^(\d+) min ago$/, '$1 मिनट पहले').replace(/^(\d+) h ago$/, '$1 घंटे पहले');
 const HI_RULES = [
+  [/^(\d+) items? · (.+)$/, (m) => m[1] + ' आइटम · ' + m[2]],
+  [/^Stock (\S+) · Min (\S+)$/, (m) => 'स्टॉक ' + m[1] + ' · न्यूनतम ' + m[2]],
+  [/^(\d+) Out of Stock$/, (m) => m[1] + ' स्टॉक खत्म'],
+  [/^(\d+) Reorder Soon$/, (m) => m[1] + ' जल्द ऑर्डर करें'],
+  [/^Order all from (.+)$/, (m) => m[1] + ' से सब ऑर्डर करें'],
+  [/^You are using version v(\d+)\. Update to get the newest features and fixes\. Your saved entries are kept\.$/, (m) => 'आप वर्ज़न v' + m[1] + ' इस्तेमाल कर रहे हैं। नई सुविधाओं के लिए अपडेट करें। आपकी सेव एंट्री सुरक्षित रहती हैं।'],
+  [/^You already have the latest version \(v(\d+)\)\.$/, (m) => 'आपके पास सबसे नया वर्ज़न (v' + m[1] + ') है।'],
+  [/^Updating to version v(\d+)…$/, (m) => 'वर्ज़न v' + m[1] + ' पर अपडेट हो रहा है…'],
   [/^Balance for (.+)$/, (m) => T(m[1]) + ' का बैलेंस'],
   [/^Last (\d+) days$/, (m) => 'पिछले ' + m[1] + ' दिन'],
   [/^Stock - Last (\d+) days$/, (m) => 'स्टॉक - पिछले ' + m[1] + ' दिन'],
@@ -435,6 +445,7 @@ function route() {
 let lastRouteKey = '';
 function onRoute() {
   const r = route();
+  if (r.name === 'reports') store.set('repview', 'stock'); else if (r.name === 'payreport') store.set('repview', 'pay');
   const key = location.hash;
   if (r.name === 'items') S.filter = { q: '', cat: r.q.get('cat') || 'all', status: r.q.get('status') || 'all' };
   if (isFormRoute(r.name)) {
@@ -464,16 +475,17 @@ function render() {
     case 'dial': top = topForm('dial'); body = vDial(); break;
     case 'items': top = topPlain('Items', 'View and manage all items', true); body = vItems(); break;
     case 'categories': top = topPlain('Categories', 'Manage item categories', true); body = vCategories(); break;
-    case 'reports': top = topPlain('Reports', 'Stock movement over time'); body = vReports(); break;
+    case 'reports': top = topReports('stock'); body = vReports(); break;
     case 'more': top = topPlain('Settings'); body = vMore(); break;
     case 'reorder': top = topPlain('Reorder List', 'Items that are low or out of stock', true); body = vReorder(); break;
     case 'pay': { const t = r.q.get('t'); top = topPay(t); body = '<div id="money"></div>'; break; }
-    case 'payreport': top = topPlain('Payments Report', 'Cash and bank totals', true); body = '<div id="money"></div>'; break;
+    case 'payreport': top = topReports('pay'); body = '<div id="money"></div>'; break;
     case 'stock': top = topPlain('Stock Overview', 'Items and alerts', true) + syncLine(); body = vHome(); break;
     default: if (payFirst()) { top = topHome(); body = vHomePay(); } else { top = topHome(); body = vHome(); }
   }
   app.innerHTML = top + body;
   $('#nav').innerHTML = isForm ? '' : navHTML(r.name);
+  if (r.name === 'reports') store.set('repview', 'stock'); else if (r.name === 'payreport') store.set('repview', 'pay');
   renderSheet();
   if (isForm) updateFormDynamic();
   if (r.name === 'pay' || r.name === 'payreport') withMoney(() => window.Money.mount(r.name === 'payreport' ? 'report' : 'entry', r.q.get('t')));
@@ -504,6 +516,21 @@ function payToday() {                       // today's money in/out from what th
 function quickTiles(withPay) {
   return `<section class="qa"><a class="qt in" href="#/in">${ic('up', 28, 2.2)}<b>Stock In</b></a><a class="qt out" href="#/out">${ic('down', 28, 2.2)}<b>Stock Out</b></a><a class="qt dial" href="#/dial">${ic('dial', 28, 2.2)}<b>Dial Out</b></a>${withPay ? `<a class="qt pay" href="#/pay">${ic('cash', 28, 2)}<b>Payments</b></a>` : `<a class="qt items" href="#/items">${ic('cube', 28, 2)}<b>Items</b></a>`}</section>`;
 }
+function hardRefresh() {                       // forget the saved app files and load the newest ones (entries stay)
+  const jobs = [];
+  if (navigator.serviceWorker) jobs.push(navigator.serviceWorker.getRegistrations().then((rs) => Promise.all(rs.map((r) => r.unregister()))));
+  if (window.caches) jobs.push(caches.keys().then((ks) => Promise.all(ks.map((k) => caches.delete(k)))));
+  Promise.all(jobs).catch(() => {}).then(() => location.replace(location.pathname + '?v=' + Date.now() + location.hash));
+}
+async function checkUpdate() {
+  const say = (t) => { const m = $('#upmsg'); if (m) m.textContent = t; };
+  say('Checking…');
+  try {
+    const t = await (await fetch('sw.js?x=' + Date.now(), { cache: 'no-store' })).text(), mm = /artime-stock-v(\d+)/.exec(t), v = mm ? Number(mm[1]) : 0;
+    if (v > APP_VER) { say('Updating to version v' + v + '…'); setTimeout(hardRefresh, 600); }
+    else say('You already have the latest version (v' + APP_VER + ').');
+  } catch (e) { say('Could not check. Check your internet and try again.'); }
+}
 function greet() { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'; }
 function topHome() {
   const alerts = items().filter((i) => i.st === 'out' || i.st === 'low').length, nm = who();
@@ -512,13 +539,24 @@ function topHome() {
     <a class="hav" href="#/more" aria-label="Profile">${avatarHTML('sm')}</a>
     <div class="grow"><div class="hi">${greet()}</div><h1>${nm ? esc(nm) : esc(APP_NAME)}</h1></div>
     <a class="ibtn" href="#/items?focus=1" aria-label="Search">${ic('search', 26)}</a>
-    <a class="ibtn" href="#/items?status=alert" aria-label="Low stock alerts">${ic('bell', 26)}${alerts ? '<span class="dot"></span>' : ''}</a>
+    <a class="ibtn" href="#/reorder" aria-label="Low stock alerts">${ic('bell', 26)}${alerts ? '<span class="dot"></span>' : ''}</a>
   </header>${syncLine()}`;
 }
 function topPlain(title, sub, back) {
   return `<header class="top plain">${back ? `<a class="ibtn" href="#/home" aria-label="Back">${ic('left', 26)}</a>` : ''}<div class="grow"><h1>${esc(title)}</h1>${sub ? `<div class="sub">${esc(sub)}</div>` : ''}</div></header>`;
 }
-function topPay() {
+function topReports(which) {
+  const sub = which === 'stock' ? 'Stock movement over time' : 'Cash and bank totals';
+  return `<header class="top plain"><div class="grow"><h1>Reports</h1><div class="sub">${sub}</div></div>
+    <div class="repsw" role="tablist" aria-label="Report type"><a class="${which === 'stock' ? 'on' : ''}" href="#/reports">${ic('cube', 15)}Stock</a><a class="${which === 'pay' ? 'on pay' : ''}" href="#/payreport">${ic('cash', 15)}Payments</a></div></header>`;
+}
+function topPay(t) {
+  if (t !== 'in' && t !== 'out') { try { t = JSON.parse(localStorage.getItem('artime.money.type')) === 'out' ? 'out' : 'in'; } catch (e) { t = 'in'; } }
+  const title = t === 'in' ? 'Payment In' : 'Payment Out', sub = t === 'in' ? 'Money received' : 'Money paid';
+  return `<header class="top center ${t}"><a class="ibtn" href="#/home" aria-label="Back">${ic('left', 26)}</a>
+    <div class="grow"><h1>${title}</h1><div class="sub">${sub}</div></div><span class="spacer"></span></header>`;
+}
+function topPayOld() {
   const title = 'Payments', sub = 'Record money in or out';
   return `<header class="top center"><a class="ibtn" href="#/home" aria-label="Back">${ic('left', 26)}</a>
     <div class="grow"><h1>${title}</h1><div class="sub">${sub}</div></div><span class="spacer"></span></header>`;
@@ -536,6 +574,7 @@ function topForm(type) {
   return `<header class="top center"><a class="ibtn" href="#/home" aria-label="Back">${ic('left', 26)}</a>
     <div class="grow"><h1>Stock ${type === 'in' ? 'In' : 'Out'}</h1><div class="sub">${type === 'in' ? 'Add incoming stock to inventory' : 'Remove stock from inventory'}</div></div><span class="spacer"></span></header>`;
 }
+const APP_VER = 23;                                  // must match the cache number in sw.js
 const payFirst = () => store.get('pref', 'stock') === 'pay';
 function syncInfo() {
   const n = S.queue.length;
@@ -569,7 +608,7 @@ function navHTML(name) {
   return `<a class="n ${on('home')}" href="#/home">${ic('home', 26)}Home</a>
     <a class="n ${on('items')}" href="#/items">${ic('cube', 26)}Items</a>
     ${pf ? payFab : stockFab}
-    <a class="n ${on('reports')}" href="#/reports">${ic('chart', 26)}Reports</a>
+    <a class="n ${name === 'payreport' ? 'on' : on('reports')}" href="${store.get('repview', pf ? 'pay' : 'stock') === 'pay' ? '#/payreport' : '#/reports'}">${ic('chart', 26)}Reports</a>
     ${pf ? stockMini : payMini}`;
 }
 
@@ -639,7 +678,7 @@ function vHome() {
   const c = chartData(S.homeRange);
   const showInstall = S.installEvt && !isStandalone();
   const td = today(); let tin = 0, tout = 0;
-  moves().forEach((e) => { if (e.date === td && !isDial(e.code)) { const q = Number(e.qty) || 0; if (e.type === 'in') tin += q; else tout += q; } });
+  moves().forEach((e) => { if (e.date === td) { const q = Number(e.qty) || 0; if (e.type === 'in') { if (!isDial(e.code)) tin += q; } else tout += q; } });
   const alertN = its.filter((i) => i.st === 'out' || i.st === 'low').length, pt = payToday();
   const hero = `<section class="hero"><div class="hh"><span>Today</span><small>${esc(dLong(td))}</small></div><div class="hm"><div><b>+${num(tin)}</b><small>Stock in</small></div><div><b>-${num(tout)}</b><small>Stock out</small></div><a href="#/reorder"><b>${alertN}</b><small>To reorder</small></a></div></section>`;
   const paycard = pt ? `<a class="card paytoday" href="#/payreport"><span class="ico">${ic('cash', 24)}</span><div class="pt"><small>Payments today</small><div class="pr"><b class="g">+${rupee(pt.i)}</b><b class="r">-${rupee(pt.o)}</b></div></div>${ic('right', 20)}</a>` : '';
@@ -650,11 +689,11 @@ function vHome() {
   <section class="stats">
     <a class="stat blue" href="#/items"><span class="ico">${ic('cube', 24)}</span><span><small>Total Items</small><b>${num(total)}</b></span></a>
     <a class="stat green" href="#/items?status=ok"><span class="ico">${ic('layers', 24)}</span><span><small>Total Stock</small><b>${num(stock)}</b></span></a>
-    <a class="stat red" href="#/items?status=out"><span class="ico">${ic('alert', 26, 2.2)}</span><span><small>Out of Stock</small><b>${outN}</b></span></a>
-    <a class="stat amber" href="#/items?status=low"><span class="ico">${ic('warn', 24, 2.1)}</span><span><small>Reorder Soon</small><b>${lowN}</b></span></a>
+    <a class="stat red" href="#/reorder"><span class="ico">${ic('alert', 26, 2.2)}</span><span><small>Out of Stock</small><b>${outN}</b></span></a>
+    <a class="stat amber" href="#/reorder"><span class="ico">${ic('warn', 24, 2.1)}</span><span><small>Reorder Soon</small><b>${lowN}</b></span></a>
   </section>
   <section class="card sec">
-    <div class="sec-h"><h2>Low Stock Alerts</h2><a class="link" href="#/items?status=alert">View All ${ic('right', 16, 2.4)}</a></div>
+    <div class="sec-h"><h2>Low Stock Alerts</h2><a class="link" href="#/reorder">View All ${ic('right', 16, 2.4)}</a></div>
     ${alerts.length ? alerts.map((i) => itemRow(i)).join('') : `<div class="empty"><b>Nothing is running low</b>Items show here when they reach their reorder level.</div>`}
   </section>
   <section class="dual">
@@ -820,18 +859,23 @@ function downloadCSV(name, rows) {
 window.ARTIME_csv = downloadCSV;
 
 /* ---------- Reorder List (all low / out items, grouped by supplier) ---------- */
+let BULK = [];
 function vReorder() {
   const its = items().filter((i) => i.st === 'out' || i.st === 'low');
   if (!S.items.length) return `<div class="card empty"><b>No items loaded</b>Open Home and tap the sync line.</div>`;
   if (!its.length) return `<div class="card empty">${ic('check', 40)}<b>Nothing is running low</b>Items show here when they reach their reorder level.</div>`;
   const setup = store.get('rsetup', []), groups = {};
   its.sort((x, y) => (x.st === y.st ? x.title.localeCompare(y.title) : x.st === 'out' ? -1 : 1)).forEach((i) => {
-    const r = setup.find((q) => String(q.code).trim().toUpperCase() === String(i.code).trim().toUpperCase());
-    const k = (r && r.supplier) || '';
-    (groups[k] = groups[k] || []).push(i);
+    const r = setup.find((q) => String(q.code).trim().toUpperCase() === String(i.code).trim().toUpperCase()) || null, k = (r && r.supplier) || '';
+    const g = groups[k] || (groups[k] = { supplier: k, phone: '', rows: [] });
+    if (r && r.phone && !g.phone) g.phone = r.phone;
+    g.rows.push({ i, r });
   });
   const names = Object.keys(groups).sort((x, y) => (x === '' ? 1 : y === '' ? -1 : x.localeCompare(y)));
-  return `<div class="count">${its.length} items to order</div>` + names.map((k) => `<div class="card sec"><div class="sec-h"><h2>${k ? esc(k) : 'No supplier set'}</h2></div>${groups[k].map((i) => itemRow(i)).join('')}</div>`).join('');
+  BULK = names.map((k) => groups[k]);
+  const outN = its.filter((i) => i.st === 'out').length, lowN = its.length - outN;
+  return `<div class="rhead"><div class="count">${its.length} items to order</div><div class="rchips"><span class="rc out">${outN} Out of Stock</span><span class="rc low">${lowN} Reorder Soon</span></div></div>`
+    + BULK.map((g, gi) => `<div class="card sec"><div class="sec-h"><div><h2>${g.supplier ? esc(g.supplier) : 'No supplier set'}</h2><small class="subtle">${g.rows.length} ${g.rows.length === 1 ? 'item' : 'items'}${g.phone ? ' · ' + esc(g.phone) : ''}</small></div>${g.rows.length > 1 ? `<button class="bulkbtn" data-rx="bulk" data-g="${gi}">${ic('send', 16)}Order all</button>` : ''}</div>${g.rows.map((x) => itemRow(x.i)).join('')}</div>`).join('');
 }
 
 /* ---------- More ---------- */
@@ -854,9 +898,11 @@ function vMore0() {
       ${q.length ? `<div class="btns"><button class="btn" data-act="sync">${ic('refresh', 18)}Sync now</button></div>` : ''}</div>
     ${f.length ? `<div class="card group"><h2>Not saved</h2><p>The sheet rejected these entries. Fix the cause, then enter them again.</p>${f.map((e) => ent(e, 'discard-failed')).join('')}</div>` : ''}
     <div class="sethead">App</div>
+    <div class="card group"><h2>App update</h2><p>You are using version v${APP_VER}. Update to get the newest features and fixes. Your saved entries are kept.</p>
+      <div class="btns"><button class="btn" data-act="upcheck">Update to latest version</button><button class="btn ghost" data-act="upforce">Clear cache and reload</button></div><div class="hint" id="upmsg"></div></div>
     <div class="card group"><h2>Install app</h2><p>${isStandalone() ? 'Installed. You are using the app version.' : installable ? 'Add ARTIME Stock to your home screen so it opens like a normal app.' : ios ? 'On iPhone: tap the Share button, then Add to Home Screen.' : 'Use your browser menu and choose Install app or Add to Home screen.'}</p>
       ${installable ? `<div class="btns"><button class="btn" data-act="install">${ic('download', 18)}Install</button></div>` : ''}</div>
-    <div class="card group"><h2>This phone</h2><div class="kv"><span>App version</span><b>v22</b></div><div class="kv"><span>Items cached</span><b>${S.items.length}</b></div><div class="kv"><span>Movements cached</span><b>${S.history.length}</b></div>
+    <div class="card group"><h2>This phone</h2><div class="kv"><span>App version</span><b>v${APP_VER}</b></div><div class="kv"><span>Items cached</span><b>${S.items.length}</b></div><div class="kv"><span>Movements cached</span><b>${S.history.length}</b></div>
       <div class="btns"><button class="btn ghost" data-act="refresh">${ic('refresh', 18)}Reload from sheet</button></div></div>`;
 }
 
@@ -1004,7 +1050,7 @@ function renderSheet() {
     const link = (href, icon, title, sub) => `<a class="mi" href="${href}">${ic(icon, 24)}<span><b>${title}</b><small>${sub}</small></span>${ic('right', 18)}</a>`;
     const al = items().filter((i) => i.st === 'out' || i.st === 'low').length;
     const td = today(); let tin = 0, tout = 0;
-    moves().forEach((e) => { if (e.date === td && !isDial(e.code)) { const q = Number(e.qty) || 0; if (e.type === 'in') tin += q; else tout += q; } });
+    moves().forEach((e) => { if (e.date === td) { const q = Number(e.qty) || 0; if (e.type === 'in') { if (!isDial(e.code)) tin += q; } else tout += q; } });
     const si = syncInfo(), nm = who();
     el.innerHTML = `<div class="scrim side" data-act="close"><aside class="drawer" role="dialog" aria-label="Menu">
       <div class="dh">${avatarHTML()}<div class="dn">${nm ? `<b>${esc(nm)}</b>` : '<a href="#/more"><b>Add your name</b></a>'}<small>${roleLine()}</small></div></div>
@@ -1012,7 +1058,6 @@ function renderSheet() {
       <div class="dsec">Today at a glance</div>
       <div class="dtoday"><div class="g"><b>+${num(tin)}</b><small>In today</small></div><div class="r"><b>-${num(tout)}</b><small>Out today</small></div><div class="${al ? 'a' : ''}"><b>${al}</b><small>To reorder</small></div></div>
       <div class="dsec">Tools</div>
-      ${link('#/reorder', 'bell', 'Reorder List', al ? al + (al === 1 ? ' item' : ' items') + ' to order' : 'Nothing to order')}
       ${link('#/dial', 'dial', 'Dial Out', 'Make dials, choose the parts')}
       ${link('#/categories', 'grid', 'Categories', 'Manage item categories')}
       ${payFirst() ? link('#/stock', 'cube', 'Stock Overview', 'Items and alerts') : ''}
@@ -1022,7 +1067,7 @@ function renderSheet() {
       <div class="dsec">App</div>
       ${link('#/more', 'gear', 'Settings', 'Name, language, links, install')}
       ${S.installEvt && !isStandalone() ? `<button class="mi" data-act="install">${ic('download', 24)}<span><b>Install app</b><small>Opens full screen like a normal app</small></span></button>` : ''}
-      <div class="dfoot">${esc(APP_NAME)} &middot; v22</div>
+      <div class="dfoot">${esc(APP_NAME)} &middot; v${APP_VER}</div>
     </aside></div>`;
     return;
   }
@@ -1067,7 +1112,9 @@ document.addEventListener('click', (ev) => {
     case 'refresh': refresh(); break;
     case 'lang': store.set('lang', v === 'hi' ? 'hi' : 'en'); document.documentElement.lang = lang(); render(); break;
     case 'add': S.sheet = { type: 'add' }; renderSheet(); break;
-    case 'payadd': S.sheet = null; location.hash = '#/pay'; break;
+    case 'upcheck': checkUpdate(); break;
+    case 'upforce': hardRefresh(); break;
+    case 'payadd': S.sheet = { type: 'payadd' }; renderSheet(); break;
     case 'avatar': { const m = store.get('avatars', {}) || {}, k = who() || '_'; if (v === '-1') delete m[k]; else m[k] = Number(v); store.set('avatars', m); render(); break; }
     case 'menu': S.sheet = { type: 'menu' }; renderSheet(); break;
     case 'close': if (ev.target === el) { S.sheet = null; renderSheet(); } break;
@@ -1258,9 +1305,39 @@ function openReorder(code, fresh, note) {
     <button class="go" data-rx="send" data-code="${esc(code)}">Send on WhatsApp</button><button class="rcancel" data-rx="close">Cancel</button></div></div>`;
   document.getElementById('rqty').addEventListener('input', (e) => { document.getElementById('rtxt').value = rsMsg(it, row, e.target.value); });
 }
+function openBulk(gi) {
+  const g = BULK[gi]; if (!g) return;
+  const rows = g.rows.map(({ i, r }) => ({ i, r, qty: Math.max(1, Math.round((r && r.qty) || (Number(i.min) * 2 - Number(i.eff)) || 1)), on: true }));
+  const build = () => {
+    const sel = rows.filter((x) => x.on && x.qty > 0);
+    return (g.supplier ? 'Hello ' + g.supplier + ',' : 'Hello,') + ' please send the following:\n' + sel.map((x, k) => (k + 1) + '. ' + ((x.r && x.r.sname) || x.i.title) + ' - ' + x.qty + ' ' + String(unitLabel(x.i.unit)).toLowerCase()).join('\n') + '\n- ' + APP_NAME;
+  };
+  let el = document.getElementById('rs'); if (!el) { el = document.createElement('div'); el.id = 'rs'; document.body.appendChild(el); }
+  el.innerHTML = `<div class="rsb" data-rx="close"><div class="rsc" onclick="event.stopPropagation()"><div class="grab"></div>
+    <h3>Order all from ${esc(g.supplier || 'supplier')}</h3><small>Tick the items and set the quantities</small>
+    <div class="bl">${rows.map((x, k) => `<div class="bi"><input type="checkbox" data-k="${k}" checked aria-label="Include"><span class="bn"><b>${esc(x.i.title)}</b><small>Stock ${num(x.i.eff)} · Min ${num(x.i.min)}</small></span><input class="bq" type="number" inputmode="decimal" data-k="${k}" value="${x.qty}"></div>`).join('')}</div>
+    <label>Message</label><textarea id="btxt" rows="6">${esc(build())}</textarea>
+    <button class="go" data-rx="bsend" data-g="${gi}">Send on WhatsApp</button><button class="rcancel" data-rx="close">Cancel</button></div></div>`;
+  const upd = (e) => { const k = Number(e.target.dataset.k); if (Number.isNaN(k) || !rows[k]) return; if (e.target.type === 'checkbox') rows[k].on = e.target.checked; else rows[k].qty = parseFloat(e.target.value) || 0; document.getElementById('btxt').value = build(); };
+  el.querySelectorAll('.bl input').forEach((inp) => { inp.addEventListener('input', upd); inp.addEventListener('change', upd); });
+  el.__rows = rows;
+}
 document.addEventListener('click', (ev) => {
   try {
     const r = ev.target.closest('[data-r]'), x = ev.target.closest('[data-rx]');
+    if (x && x.dataset.rx === 'bulk') { ev.stopPropagation(); ev.preventDefault(); openBulk(Number(x.dataset.g)); return; }
+    if (x && x.dataset.rx === 'bsend') {
+      ev.stopPropagation();
+      const el = document.getElementById('rs'), rows = el && el.__rows, g = BULK[Number(x.dataset.g)];
+      if (!rows || !g) return;
+      const sel = rows.filter((q) => q.on && q.qty > 0);
+      if (!sel.length) { toast('Tick at least one item', true); return; }
+      const text = document.getElementById('btxt').value, rq = store.get('rq', []);
+      sel.forEach((q) => rq.push({ id: 'R' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), code: q.i.code, qty: q.qty, date: today(), supplier: g.supplier || '', phone: g.phone || '', by: store.get('by', '') || '-' }));
+      store.set('rq', rq); el.remove();
+      window.open('https://wa.me/' + waNum(g.phone) + '?text=' + encodeURIComponent(text), '_blank');
+      sync(true); render(); return;
+    }
     if (r) { ev.stopPropagation(); ev.preventDefault(); openReorder(r.dataset.r); return; }
     if (!x) return;
     if (x.classList.contains('rsb') && ev.target !== x) return;     // tapping inside the popup (quantity, message) must not close it
