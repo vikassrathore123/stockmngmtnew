@@ -25,7 +25,7 @@ const CAT_NAME = { clock: 'Clock Items', packing: 'Packaging Items' };
 /* ================= helpers ================= */
 const $ = (s, r = document) => r.querySelector(s);
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const num = (n) => Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+const num = (n) => Number(n || 0).toLocaleString((() => { try { return JSON.parse(localStorage.getItem('artime.numfmt')) === 'intl' ? 'en-US' : 'en-IN'; } catch (e) { return 'en-IN'; } })(), { maximumFractionDigits: 2 });
 const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : '');
 const uniq = (a) => [...new Set(a)];
 const iso = (d) => d.toLocaleDateString('en-CA');
@@ -95,6 +95,16 @@ const HI = {
   'Save Payment In': 'पैसा आया सेव करें', 'Save Payment Out': 'पैसा गया सेव करें', 'Clear': 'हटाएँ', 'All accounts': 'सभी खाते', 'Day by day': 'दिन-दिन का हिसाब', 'Top parties': 'मुख्य पार्टियाँ', 'Compared with yesterday': 'कल से तुलना', 'Compared with the period before': 'पिछली अवधि से तुलना',
   'Order all': 'सब ऑर्डर करें', 'Tick the items and set the quantities': 'आइटम चुनें और मात्रा डालें', 'Tick at least one item': 'कम से कम एक आइटम चुनें', 'Include': 'शामिल करें',
   'App update': 'ऐप अपडेट', 'Update to latest version': 'नए वर्ज़न पर अपडेट करें', 'Clear cache and reload': 'कैश साफ़ करके दोबारा खोलें', 'Could not check. Check your internet and try again.': 'जाँच नहीं हो सकी। इंटरनेट जाँचकर फिर कोशिश करें।', 'Money in hand': 'हाथ में पैसा', 'Last 7 days': 'पिछले 7 दिन',
+  'Settings': 'सेटिंग्स', 'App preferences': 'ऐप की पसंद', 'Inventory & payments': 'इन्वेंटरी और भुगतान', 'Data & sync': 'डेटा और सिंक', 'App & support': 'ऐप और सहायता', 'Edit Profile': 'प्रोफ़ाइल बदलें', 'Preferences': 'पसंद',
+  'Appearance': 'दिखावट', 'Light': 'हल्का', 'Dark': 'गहरा', 'System': 'सिस्टम', 'Default screen': 'पहली स्क्रीन', 'Main action button': 'मुख्य बटन', 'Number format': 'संख्या का रूप', 'Indian (1,00,000)': 'भारतीय (1,00,000)', 'International (100,000)': 'अंतरराष्ट्रीय (100,000)',
+  'Inventory settings': 'इन्वेंटरी सेटिंग्स', 'Payment settings': 'भुगतान सेटिंग्स', 'Google Sheets': 'Google Sheets', 'Last sync:': 'आख़िरी सिंक:', 'About ARTIME': 'ARTIME के बारे में', 'Advanced settings': 'एडवांस्ड सेटिंग्स', 'Save profile': 'प्रोफ़ाइल सेव करें', 'Profile saved': 'प्रोफ़ाइल सेव हुई',
+  'Connected': 'जुड़ा है', 'Not connected': 'जुड़ा नहीं', 'Problem': 'दिक्कत', 'Connection status': 'कनेक्शन की स्थिति', 'Stock sheet': 'स्टॉक शीट', 'Payments sheet': 'भुगतान शीट', 'Manage connection': 'कनेक्शन संभालें', 'Stock sheet link': 'स्टॉक शीट का लिंक', 'Payments sheet link': 'भुगतान शीट का लिंक',
+  'Sync information': 'सिंक की जानकारी', 'Pending changes': 'बाकी बदलाव', 'All changes are saved on this phone first and synced to Google Sheets.': 'सब बदलाव पहले इस फ़ोन में सेव होते हैं और फिर Google Sheets में सिंक होते हैं।',
+  'Low stock alerts on Home': 'होम पर कम स्टॉक अलर्ट', 'Show items that are running low on the Home screen': 'होम स्क्रीन पर कम होते आइटम दिखाएँ', 'Confirm before saving': 'सेव से पहले पूछें', 'Ask once more before a Stock In or Stock Out is saved': 'स्टॉक इन या आउट सेव करने से पहले एक बार और पूछें',
+  'Note required on Stock Out': 'स्टॉक आउट पर नोट ज़रूरी', 'Stock Out can only be saved with a note': 'स्टॉक आउट नोट के बिना सेव नहीं होगा', 'Items page opens with': 'आइटम पेज इससे खुलेगा', 'All items': 'सभी आइटम', 'Add a note for Stock Out': 'स्टॉक आउट के लिए नोट लिखें',
+  'Payment mode': 'भुगतान का तरीका', 'Last used': 'पिछला इस्तेमाल', 'Date on a new entry': 'नई एंट्री की तारीख', 'Note required': 'नोट ज़रूरी', 'A payment can only be saved with a note': 'भुगतान नोट के बिना सेव नहीं होगा', 'Ask once more before a payment is saved': 'भुगतान सेव करने से पहले एक बार और पूछें', 'Add a note': 'नोट लिखें',
+  'Local data': 'लोकल डेटा', 'This forgets the saved app files and loads fresh ones. Entries waiting to sync and everything in Google Sheets stay safe.': 'यह सेव की हुई ऐप फ़ाइलें भुलाकर नई लोड करता है। सिंक के लिए रुकी एंट्री और Google Sheets का सारा डेटा सुरक्षित रहता है।', 'Update reminder': 'अपडेट की याद', 'Show a message on Home when a new version is available': 'नया वर्ज़न आने पर होम पर संदेश दिखाएँ', 'Update now': 'अभी अपडेट करें',
+  'Log in to Payments': 'भुगतान में लॉगिन करें', 'Enter your PIN. Only the first time on this phone.': 'अपना PIN डालें। इस फ़ोन पर सिर्फ़ पहली बार।', 'Item-wise report': 'आइटम-वार रिपोर्ट', 'Dial Out counts every part that went out.': 'डायल आउट में निकले हर पार्ट की गिनती होती है।', 'Item': 'आइटम', 'In': 'इन', 'Out': 'आउट', 'Net': 'नेट', 'Excel': 'Excel', 'Today': 'आज',
   'Payment In': 'पैसा आया', 'Payment Out': 'पैसा गया', 'Money received': 'मिला हुआ पैसा', 'Money paid': 'दिया हुआ पैसा', 'New payment': 'नया भुगतान',
   'Stock Overview': 'स्टॉक की स्थिति', 'Items and alerts': 'आइटम और अलर्ट', 'Items that are low or out of stock': 'जो आइटम कम या खत्म हैं', 'Received today': 'आज मिला', 'Paid today': 'आज दिया', 'Net today': 'आज का नेट',
   'Recent payments': 'हाल के भुगतान', 'Full report': 'पूरी रिपोर्ट', 'Log in to see payments': 'भुगतान देखने के लिए लॉगिन करें', 'Enter PIN': 'PIN डालें', 'Enter PIN to load totals': 'हिसाब लोड करने के लिए PIN डालें',
@@ -134,6 +144,9 @@ const HI = {
 };
 const trAge = (s) => s.replace(/^just now$/, 'अभी').replace(/^(\d+) min ago$/, '$1 मिनट पहले').replace(/^(\d+) h ago$/, '$1 घंटे पहले');
 const HI_RULES = [
+  [/^Last sync: (.+)$/, (m) => 'आख़िरी सिंक: ' + trAge(m[1])],
+  [/^New version v(\d+) is ready$/, (m) => 'नया वर्ज़न v' + m[1] + ' तैयार है'],
+  [/^Version v(\d+)$/, (m) => 'वर्ज़न v' + m[1]],
   [/^(\d+) items? · (.+)$/, (m) => m[1] + ' आइटम · ' + m[2]],
   [/^Stock (\S+) · Min (\S+)$/, (m) => 'स्टॉक ' + m[1] + ' · न्यूनतम ' + m[2]],
   [/^(\d+) Out of Stock$/, (m) => m[1] + ' स्टॉक खत्म'],
@@ -211,6 +224,14 @@ document.documentElement.lang = lang();
 
 /* ================= icons ================= */
 const P = {
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.8 3 2.8 15 0 18M12 3c-2.8 3-2.8 15 0 18"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.2 5.2l1.6 1.6M17.2 17.2l1.6 1.6M18.8 5.2l-1.6 1.6M6.8 17.2l-1.6 1.6"/>',
+  moon: '<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/>',
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 7.6v.01"/>',
+  cloud: '<path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 10.5a3.8 3.8 0 0 1-.5 7.5z"/>',
+  lock: '<rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/><path d="M12 14.5v2.5"/>',
+  back: '<path d="M9 5h11a1.5 1.5 0 0 1 1.5 1.5v11A1.5 1.5 0 0 1 20 19H9l-6-7z"/><path d="M12.5 9.5l5 5M17.5 9.5l-5 5"/>',
+  card: '<rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3 10h18"/><path d="M7 15h3"/>',
   send: '<path d="M21 3L10.5 13.5"/><path d="M21 3l-6.8 18-3.7-7.5L3 9.8z"/>',
   dial: '<circle cx="12" cy="12" r="9"/><path d="M12 3.8v2.2M12 18v2.2M3.8 12H6M18 12h2.2"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/>',
   home: '<path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v10h13V10"/><path d="M10 20v-5.5h4V20"/>',
@@ -447,7 +468,8 @@ function onRoute() {
   const r = route();
   if (r.name === 'reports') store.set('repview', 'stock'); else if (r.name === 'payreport') store.set('repview', 'pay');
   const key = location.hash;
-  if (r.name === 'items') S.filter = { q: '', cat: r.q.get('cat') || 'all', status: r.q.get('status') || 'all' };
+  if (r.name === 'reports') { const t = r.q.get('t'), rr = r.q.get('r'); if (t) S.repType = t; if (rr) S.repRange = Number(rr); }
+  if (r.name === 'items') S.filter = { q: '', cat: r.q.get('cat') || 'all', status: r.q.get('status') || (store.get('itemsDef', 'all') === 'alert' ? 'alert' : 'all') };
   if (isFormRoute(r.name)) {
     const f = ensureForm(r.name);
     f.date = today();
@@ -477,6 +499,13 @@ function render() {
     case 'categories': top = topPlain('Categories', 'Manage item categories', true); body = vCategories(); break;
     case 'reports': top = topReports('stock'); body = vReports(); break;
     case 'more': top = topPlain('Settings'); body = vMore(); break;
+    case 'set-profile': top = topSub('Edit Profile'); body = vSetProfile(); break;
+    case 'set-prefs': top = topSub('Preferences'); body = vSetPrefs(); break;
+    case 'set-sheets': top = topSub('Google Sheets'); body = vSetSheets(); break;
+    case 'set-inv': top = topSub('Inventory settings'); body = vSetInv(); break;
+    case 'set-pay': top = topSub('Payment settings'); body = vSetPay(); break;
+    case 'set-adv': top = topSub('Advanced settings'); body = vSetAdv(); break;
+    case 'set-about': top = topSub('About ARTIME'); body = vSetAbout(); break;
     case 'reorder': top = topPlain('Reorder List', 'Items that are low or out of stock', true); body = vReorder(); break;
     case 'pay': { const t = r.q.get('t'); top = topPay(t); body = '<div id="money"></div>'; break; }
     case 'payreport': top = topReports('pay'); body = '<div id="money"></div>'; break;
@@ -502,7 +531,7 @@ function softRender() {
   render();
 }
 
-const rupee = (n) => '₹' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+const rupee = (n) => '₹' + num(n);
 function payToday() {                       // today's money in/out from what this phone already knows (no network)
   const u = moneyUser(); if (!u) return null;
   let rep = null, q = []; try { rep = JSON.parse(localStorage.getItem('artime.money.rep')); } catch (e) { /* none */ } try { q = JSON.parse(localStorage.getItem('artime.money.q')) || []; } catch (e) { /* none */ }
@@ -515,6 +544,15 @@ function payToday() {                       // today's money in/out from what th
 }
 function quickTiles(withPay) {
   return `<section class="qa"><a class="qt in" href="#/in">${ic('up', 28, 2.2)}<b>Stock In</b></a><a class="qt out" href="#/out">${ic('down', 28, 2.2)}<b>Stock Out</b></a><a class="qt dial" href="#/dial">${ic('dial', 28, 2.2)}<b>Dial Out</b></a>${withPay ? `<a class="qt pay" href="#/pay">${ic('cash', 28, 2)}<b>Payments</b></a>` : `<a class="qt items" href="#/items">${ic('cube', 28, 2)}<b>Items</b></a>`}</section>`;
+}
+function updBar() { return S.newVer ? `<div class="updbar"><span>${ic('download', 18)}New version v${S.newVer} is ready</span><button data-act="upcheck">Update now</button></div>` : ''; }
+async function autoCheckUpdate() {              // once every 6 hours at most, only to show the "new version" message
+  if (!store.get('updAlert', true) || !navigator.onLine || Date.now() - store.get('updAt', 0) < 6 * 3600 * 1000) return;
+  store.set('updAt', Date.now());
+  try {
+    const t = await (await fetch('sw.js?x=' + Date.now(), { cache: 'no-store' })).text(), mm = /artime-stock-v(\d+)/.exec(t);
+    if (mm && Number(mm[1]) > APP_VER) { S.newVer = Number(mm[1]); softRender(); }
+  } catch (e) { /* offline is fine */ }
 }
 function hardRefresh() {                       // forget the saved app files and load the newest ones (entries stay)
   const jobs = [];
@@ -530,6 +568,10 @@ async function checkUpdate() {
     if (v > APP_VER) { say('Updating to version v' + v + '…'); setTimeout(hardRefresh, 600); }
     else say('You already have the latest version (v' + APP_VER + ').');
   } catch (e) { say('Could not check. Check your internet and try again.'); }
+}
+function applyTheme() {
+  const t = store.get('theme', 'light'); document.documentElement.dataset.theme = t;
+  const mc = document.querySelector('meta[name=theme-color]'); if (mc) mc.content = t === 'dark' || (t === 'system' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? '#0d1320' : '#f3f5f9';
 }
 function greet() { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'; }
 function topHome() {
@@ -563,8 +605,7 @@ function topPayOld() {
 }
 function vHomePay() {
   const al = items().filter((i) => i.st === 'out' || i.st === 'low').length;
-  return `<div id="paydash"></div>
-    <div class="sethead" style="margin:18px 16px 8px">Stock</div>${quickTiles(false)}
+  return `${updBar()}<div id="paydash"></div>
     ${al ? `<a class="card payalert" href="#/reorder">${ic('bell', 24)}<span><b>${al} ${al === 1 ? 'item' : 'items'} to order</b><small>Items that are low or out of stock</small></span>${ic('right', 18)}</a>` : ''}
     <a class="card payalert" href="#/stock">${ic('cube', 24)}<span><b>Stock Overview</b><small>Items and alerts</small></span>${ic('right', 18)}</a>`;
 }
@@ -574,7 +615,7 @@ function topForm(type) {
   return `<header class="top center"><a class="ibtn" href="#/home" aria-label="Back">${ic('left', 26)}</a>
     <div class="grow"><h1>Stock ${type === 'in' ? 'In' : 'Out'}</h1><div class="sub">${type === 'in' ? 'Add incoming stock to inventory' : 'Remove stock from inventory'}</div></div><span class="spacer"></span></header>`;
 }
-const APP_VER = 24;                                  // must match the cache number in sw.js
+const APP_VER = 25;                                  // must match the cache number in sw.js
 const payFirst = () => store.get('pref', 'stock') === 'pay';
 function syncInfo() {
   const n = S.queue.length;
@@ -678,13 +719,12 @@ function vHome() {
   const c = chartData(S.homeRange);
   const showInstall = S.installEvt && !isStandalone();
   const td = today(); let tin = 0, tout = 0;
-  moves().forEach((e) => { if (e.date === td) { const q = Number(e.qty) || 0; if (e.type === 'in') { if (!isDial(e.code)) tin += q; } else tout += q; } });
+  expMoves().forEach((e) => { if (e.date === td) { const q = Number(e.qty) || 0; if (e.type === 'in') tin += q; else tout += q; } });
   const alertN = its.filter((i) => i.st === 'out' || i.st === 'low').length, pt = payToday();
-  const hero = `<section class="hero"><div class="hh"><span>Today</span><small>${esc(dLong(td))}</small></div><div class="hm"><div><b>+${num(tin)}</b><small>Stock in</small></div><div><b>-${num(tout)}</b><small>Stock out</small></div><a href="#/reorder"><b>${alertN}</b><small>To reorder</small></a></div></section>`;
+  const hero = `<section class="hero"><div class="hh"><span>Today</span><small>${esc(dLong(td))}</small></div><div class="hm"><a href="#/reports?t=in&r=1"><b>+${num(tin)}</b><small>Stock in</small></a><a href="#/reports?t=out&r=1"><b>-${num(tout)}</b><small>Stock out</small></a><a href="#/reorder"><b>${alertN}</b><small>To reorder</small></a></div></section>`;
   const paycard = pt ? `<a class="card paytoday" href="#/payreport"><span class="ico">${ic('cash', 24)}</span><div class="pt"><small>Payments today</small><div class="pr"><b class="g">+${rupee(pt.i)}</b><b class="r">-${rupee(pt.o)}</b></div></div>${ic('right', 20)}</a>` : '';
-  return `${showInstall ? `<div class="install"><span class="t"><b>Install ARTIME Stock</b><small>Opens full screen like a normal app</small></span><button data-act="install">Install</button></div>` : ''}
+  return `${updBar()}${showInstall ? `<div class="install"><span class="t"><b>Install ARTIME Stock</b><small>Opens full screen like a normal app</small></span><button data-act="install">Install</button></div>` : ''}
   ${hero}
-  ${quickTiles(true)}
   ${paycard}
   <section class="stats">
     <a class="stat blue" href="#/items"><span class="ico">${ic('cube', 24)}</span><span><small>Total Items</small><b>${num(total)}</b></span></a>
@@ -692,10 +732,10 @@ function vHome() {
     <a class="stat red" href="#/reorder"><span class="ico">${ic('alert', 26, 2.2)}</span><span><small>Out of Stock</small><b>${outN}</b></span></a>
     <a class="stat amber" href="#/reorder"><span class="ico">${ic('warn', 24, 2.1)}</span><span><small>Reorder Soon</small><b>${lowN}</b></span></a>
   </section>
-  <section class="card sec">
+  ${store.get('homeAlerts', true) ? `<section class="card sec">
     <div class="sec-h"><h2>Low Stock Alerts</h2><a class="link" href="#/reorder">View All ${ic('right', 16, 2.4)}</a></div>
     ${alerts.length ? alerts.map((i) => itemRow(i)).join('') : `<div class="empty"><b>Nothing is running low</b>Items show here when they reach their reorder level.</div>`}
-  </section>
+  </section>` : ''}
   <section class="dual">
     <div class="card">
       <div class="sec-h"><h2>Recent Stock Activity</h2><a class="link" href="#/reports">View All ${ic('right', 16, 2.4)}</a></div>
@@ -714,9 +754,20 @@ function itemRow(i) {
     <span class="pillcol">${pill(i.st, i.code)}</span>
     <span class="end"><b>${num(i.eff)}</b><small>${esc(unitLabel(i.unit))}</small></span></button>`;
 }
+function expMoves() {            // per-item movements: each Dial Out becomes one 'out' row for every part that went (ticked parts only)
+  const out = [];
+  moves().forEach((e) => {
+    if (isDial(e.code)) {
+      if (e.type !== 'out') return;
+      const sk = skippedOf(e.note);
+      dialParts(e.code).filter((c) => !sk.includes(c)).forEach((c) => out.push(Object.assign({}, e, { code: c, via: 'dial', dialCode: e.code })));
+    } else out.push(e);
+  });
+  return out;
+}
 function actRow(e, nm) {
   const inn = e.type === 'in';
-  const dl = !inn && isDial(e.code);
+  const dl = !inn && (isDial(e.code) || !!e.via);
   const left = dl ? skippedOf(e.note).map((c) => String(nm[c] || c).split(' - ')[0]) : [];
   return `<div class="act"><span class="aic ${inn ? 'in' : 'out'}">${ic(inn ? 'up' : 'down', 22, 2.2)}</span>
     <div class="am"><b>${dl ? 'Dial Out' : 'Stock ' + (inn ? 'In' : 'Out')}</b><span>${esc(nm[e.code] || e.code)}${left.length ? ' - without ' + esc(left.join(', ')) : ''}</span></div>
@@ -803,14 +854,25 @@ function vCategories() {
 
 /* ---------- Reports ---------- */
 const REP_TYPES = [['all', 'All'], ['in', 'Stock In'], ['out', 'Stock Out'], ['dial', 'Dial Out']];
+function repStats(days) {
+  const from = ago(days - 1), per = {}, dials = { n: 0 };
+  moves().forEach((e) => { if (e.date >= from && isDial(e.code) && e.type === 'out') dials.n += Number(e.qty) || 0; });
+  expMoves().forEach((e) => {
+    if (e.date < from) return;
+    const q = Number(e.qty) || 0, p = per[e.code] || (per[e.code] = { i: 0, o: 0 });
+    if (e.type === 'in') p.i += q; else p.o += q;
+  });
+  let ti = 0, to = 0; Object.values(per).forEach((p) => { ti += p.i; to += p.o; });
+  return { per, ti, to, dials: dials.n };
+}
 function repFiltered() {
   const nm = {}; items().forEach((i) => { nm[i.code] = i.title; });
   const from = ago(S.repRange - 1), q = String(S.repQ || '').trim().toLowerCase();
-  let list = sortMoves(moves().filter((e) => e.date >= from));
-  const base = list;
-  if (S.repType === 'in') list = list.filter((e) => e.type === 'in' && !isDial(e.code));
-  else if (S.repType === 'out') list = list.filter((e) => e.type === 'out' && !isDial(e.code));
-  else if (S.repType === 'dial') list = list.filter((e) => isDial(e.code));
+  const raw = sortMoves(moves().filter((e) => e.date >= from)), base = raw;
+  let list = raw;
+  if (S.repType === 'in') list = raw.filter((e) => e.type === 'in' && !isDial(e.code));
+  else if (S.repType === 'out') list = sortMoves(expMoves().filter((e) => e.date >= from && e.type === 'out'));
+  else if (S.repType === 'dial') list = raw.filter((e) => isDial(e.code));
   if (q) list = list.filter((e) => (String(nm[e.code] || '') + ' ' + e.code + ' ' + (e.party || '') + ' ' + (e.note || '') + ' ' + (e.ref || '')).toLowerCase().includes(q));
   return { nm, base, list };
 }
@@ -824,19 +886,24 @@ function repListHTML() {
   });
   return log;
 }
+function itemWiseHTML(per, nm) {
+  const rows = Object.entries(per).sort((x, y) => (y[1].o - x[1].o) || (y[1].i - x[1].i)).slice(0, 80);
+  if (!rows.length) return `<div class="empty"><b>No movements</b>Nothing recorded in this period.</div>`;
+  return `<div class="iw head"><span>Item</span><span>In</span><span>Out</span><span>Net</span></div>` + rows.map(([c, p]) => { const net = p.i - p.o; return `<div class="iw"><span class="in">${esc(nm[c] || c)}</span><b class="g">${p.i ? '+' + num(p.i) : '-'}</b><b class="r">${p.o ? '-' + num(p.o) : '-'}</b><b class="${net < 0 ? 'r' : net > 0 ? 'g' : ''}">${net > 0 ? '+' : ''}${num(net)}</b></div>`; }).join('');
+}
 function vReports() {
-  const { nm, base, list } = repFiltered();
-  const c = chartData(S.repRange);
-  const sum = { in: 0, out: 0, dial: 0 }, used = {}, got = {};
-  base.forEach((e) => { const q = Number(e.qty) || 0; if (isDial(e.code)) { if (e.type === 'out') sum.dial += q; return; } if (e.type === 'in') { sum.in += q; got[e.code] = (got[e.code] || 0) + q; } else { sum.out += q; used[e.code] = (used[e.code] || 0) + q; } });
-  const top = (o) => Object.entries(o).sort((x, y) => y[1] - x[1]).slice(0, 5);
-  const tu = top(used), tg = top(got);
+  const { nm, list } = repFiltered();
+  const c = chartData(S.repRange), st = repStats(S.repRange);
+  const top = (k) => Object.entries(st.per).filter((x) => x[1][k] > 0).sort((x, y) => y[1][k] - x[1][k]).slice(0, 5).map((x) => [x[0], x[1][k]]);
+  const tu = top('o'), tg = top('i');
   const chip = (v, label) => `<button class="chip ${S.repRange === v ? 'on' : ''}" data-act="rrange" data-v="${v}">${label}</button>`;
   const tchip = (v, label) => `<button class="chip ${S.repType === v ? 'on' : ''}" data-act="rtype" data-v="${v}">${label}</button>`;
   const bars = (arr, cls, sign) => arr.length ? arr.map(([code, q]) => `<div class="row plain"><div style="display:flex;justify-content:space-between;gap:10px"><b style="font-weight:600">${esc(nm[code] || code)}</b><b class="${cls}">${sign}${num(q)}</b></div><div class="bar ${cls === 'g' ? 'gb' : ''}"><i style="width:${Math.max(4, Math.round((q / arr[0][1]) * 100))}%"></i></div></div>`).join('') : `<div class="empty"><b>Nothing here</b>No entries in this period.</div>`;
-  return `<div class="chips" style="margin-top:0">${chip(7, 'Last 7 Days')}${chip(14, 'Last 14 Days')}${chip(30, 'Last 30 Days')}${chip(90, 'Last 90 Days')}</div>
-    <section class="rsum"><div class="g"><small>Stock In</small><b>+${num(sum.in)}</b></div><div class="r"><small>Stock Out</small><b>-${num(sum.out)}</b></div><div class="b"><small>Dials made</small><b>${num(sum.dial)}</b></div></section>
+  return `<div class="chips" style="margin-top:0">${chip(1, 'Today')}${chip(7, 'Last 7 Days')}${chip(14, 'Last 14 Days')}${chip(30, 'Last 30 Days')}${chip(90, 'Last 90 Days')}</div>
+    <section class="rsum"><div class="g"><small>Stock In</small><b>+${num(st.ti)}</b></div><div class="r"><small>Stock Out</small><b>-${num(st.to)}</b></div><div class="b"><small>Dials made</small><b>${num(st.dials)}</b></div></section>
     <div class="repact"><button class="btn ghost" data-act="repshare">${ic('send', 18)}Share summary</button><button class="btn ghost" data-act="repcsv">${ic('download', 18)}Download Excel (CSV)</button></div>
+    <div class="card sec" style="overflow:hidden"><div class="sec-h"><h2>Item-wise report</h2><button class="x" data-act="repcsvitems">${ic('download', 16)}Excel</button></div>
+      <p class="subtle" style="margin:0 16px 6px">Dial Out counts every part that went out.</p>${itemWiseHTML(st.per, nm)}</div>
     <div class="card sec">${chartBlock(c)}</div>
     <div class="dual"><div class="card sec"><div class="sec-h"><h2>Most used</h2></div>${bars(tu, 'r', '-')}</div>
     <div class="card sec"><div class="sec-h"><h2>Most received</h2></div>${bars(tg, 'g', '+')}</div></div>
@@ -846,10 +913,9 @@ function vReports() {
       <div id="replist">${repListHTML()}</div></div>`;
 }
 function repSummaryText() {
-  const { nm, base } = repFiltered(); let i = 0, o = 0, d = 0; const used = {};
-  base.forEach((e) => { const q = Number(e.qty) || 0; if (isDial(e.code)) { if (e.type === 'out') d += q; return; } if (e.type === 'in') i += q; else { o += q; used[e.code] = (used[e.code] || 0) + q; } });
-  const top = Object.entries(used).sort((x, y) => y[1] - x[1]).slice(0, 3).map(([c, q]) => (nm[c] || c) + ' (' + num(q) + ')').join(', ');
-  return `${APP_NAME} Stock - Last ${S.repRange} days\nStock In: +${num(i)}\nStock Out: -${num(o)}\nDials made: ${num(d)}${top ? '\nMost used: ' + top : ''}`;
+  const { nm } = repFiltered(), st = repStats(S.repRange);
+  const used = Object.entries(st.per).filter((x) => x[1].o > 0).sort((x, y) => y[1].o - x[1].o).slice(0, 5).map(([c, p]) => (nm[c] || c) + ' (' + num(p.o) + ')').join(', ');
+  return `${APP_NAME} Stock - ${S.repRange === 1 ? 'Today' : 'Last ' + S.repRange + ' days'}\nStock In: +${num(st.ti)}\nStock Out: -${num(st.to)}\nDials made: ${num(st.dials)}${used ? '\nMost used: ' + used : ''}`;
 }
 function downloadCSV(name, rows) {
   const csv = rows.map((r) => r.map((x) => '"' + String(x == null ? '' : x).replace(/"/g, '""') + '"').join(',')).join('\r\n');
@@ -878,32 +944,98 @@ function vReorder() {
     + BULK.map((g, gi) => `<div class="card sec"><div class="sec-h"><div><h2>${g.supplier ? esc(g.supplier) : 'No supplier set'}</h2><small class="subtle">${g.rows.length} ${g.rows.length === 1 ? 'item' : 'items'}${g.phone ? ' · ' + esc(g.phone) : ''}</small></div>${g.rows.length > 1 ? `<button class="bulkbtn" data-rx="bulk" data-g="${gi}">${ic('send', 16)}Order all</button>` : ''}</div>${g.rows.map((x) => itemRow(x.i)).join('')}</div>`).join('');
 }
 
-/* ---------- More ---------- */
-function vMore() { return prefHTML() + vMore0(); }
-function vMore0() {
-  const q = S.queue, f = S.failed;
+/* ---------- Settings: a hub with a page for each group ---------- */
+function topSub(title) { return `<header class="top center"><a class="ibtn" href="#/more" aria-label="Back">${ic('left', 26)}</a><div class="grow"><h1>${esc(title)}</h1></div><span class="spacer"></span></header>`; }
+const THEME_NAMES = { light: 'Light', dark: 'Dark', system: 'System' };
+const SCREEN_NAMES = { home: 'Home', items: 'Items', reports: 'Reports' };
+const srow = (href, icon, title, val, sub) => `<a class="srow" href="${href}"><span class="si">${ic(icon, 22)}</span><span class="sx"><b>${title}</b>${sub ? `<small>${sub}</small>` : ''}</span>${val ? `<span class="sv">${val}</span>` : ''}${ic('right', 18)}</a>`;
+const segBtns = (k, cur, opts) => `<div class="seg">${opts.map(([v, l]) => `<button class="${cur === v ? 'on' : ''}" data-act="setv" data-k="${k}" data-v="${v}">${l}</button>`).join('')}</div>`;
+const swRow = (icon, k, def, title, sub) => { const on = store.get(k, def); return `<div class="trow"><span class="si">${ic(icon, 22)}</span><span class="sx"><b>${title}</b>${sub ? `<small>${sub}</small>` : ''}</span><button class="sw ${on ? 'on' : ''}" role="switch" aria-checked="${on}" aria-label="${title}" data-act="tog" data-k="${k}" data-d="${def ? 1 : 0}"><i></i></button></div>`; };
+const prefCard = (icon, title, body) => `<div class="card pcard"><div class="ph"><span class="si">${ic(icon, 22)}</span><b>${title}</b></div>${body}</div>`;
+function connState() { return !S.url ? ['Not connected', 'warn'] : S.error ? ['Problem', 'bad'] : ['Connected', 'ok']; }
+
+function vMore() {
+  syncName();
+  const nm = who(), [cs, cc] = connState();
+  return `<a class="profrow" href="#/set-profile">${avatarHTML('big')}<div class="pn"><b>${nm ? esc(nm) : 'Add your name'}</b><small>${roleLine()}</small></div>${ic('right', 20)}</a>
+    <div class="shead">App preferences</div>
+    <div class="slist">${srow('#/set-prefs', 'globe', 'Language', lang() === 'hi' ? 'हिन्दी' : 'English')}${srow('#/set-prefs', store.get('theme', 'light') === 'dark' ? 'moon' : 'sun', 'Appearance', THEME_NAMES[store.get('theme', 'light')])}${srow('#/set-prefs', 'home', 'Default screen', SCREEN_NAMES[store.get('home', 'home')])}${srow('#/set-prefs', 'plus', 'Main action button', payFirst() ? 'Payments' : 'Stock')}</div>
+    <div class="shead">Inventory & payments</div>
+    <div class="slist">${srow('#/set-inv', 'cube', 'Inventory settings')}${srow('#/set-pay', 'card', 'Payment settings')}</div>
+    <div class="shead">Data & sync</div>
+    <div class="slist"><a class="srow" href="#/set-sheets"><span class="si">${ic('cloud', 22)}</span><span class="sx"><b>Google Sheets</b><small>Last sync: ${S.synced ? esc(ago_(S.synced)) : 'Never'}</small></span><span class="sv st-${cc}"><i class="dot"></i>${cs}</span>${ic('right', 18)}</a></div>
+    <div class="shead">App & support</div>
+    <div class="slist">${srow('#/set-about', 'info', 'About ARTIME')}${srow('#/set-adv', 'gear', 'Advanced settings')}</div>`;
+}
+
+function vSetProfile() {
+  syncName();
+  const nm = store.get('by', ''), locked = !!payName();
+  return `<div class="pf"><div class="pfav">${avatarHTML('huge')}</div>
+    <label class="field big"><input id="pname" placeholder="Your name" value="${esc(nm)}"${locked ? ' readonly' : ''} autocomplete="off"></label>
+    <div class="field big ro"><span>${roleLine()}</span></div>
+    <p class="subtle" style="text-align:center">${locked ? 'Taken automatically from your Payments login. Log out of Payments to change it.' : 'Saved on every stock entry and reorder you make. Log in to Payments and it fills in by itself.'}</p>
+    <div class="pick">Choose your picture</div>${avatarPicker()}
+    <button class="submit go" data-act="saveprofile">Save profile</button></div>`;
+}
+function vSetPrefs() {
+  const th = store.get('theme', 'light'), hs = store.get('home', 'home'), nf = store.get('numfmt', 'in');
+  return prefCard('globe', 'Language', `<div class="seg"><button class="${lang() === 'en' ? 'on' : ''}" data-act="lang" data-v="en">English</button><button class="${lang() === 'hi' ? 'on' : ''}" data-act="lang" data-v="hi">हिन्दी</button></div>`)
+    + prefCard('sun', 'Appearance', segBtns('theme', th, [['light', 'Light'], ['dark', 'Dark'], ['system', 'System']]))
+    + prefCard('home', 'Default screen', segBtns('home', hs, [['home', 'Home'], ['items', 'Items'], ['reports', 'Reports']]))
+    + prefCard('plus', 'Main action button', `<div class="seg"><button class="${payFirst() ? '' : 'on'}" data-m="pref" data-v="stock">Stock</button><button class="${payFirst() ? 'on' : ''}" data-m="pref" data-v="pay">Payments</button></div><p class="subtle">The one you pick gets the big middle button and shows on Home. The other moves to the small button on the right.</p>`)
+    + prefCard('layers', 'Number format', segBtns('numfmt', nf, [['in', 'Indian (1,00,000)'], ['intl', 'International (100,000)']]));
+}
+function vSetSheets() {
+  const q = S.queue, f = S.failed, [cs, cc] = connState();
   const nm = {}; items().forEach((i) => { nm[i.code] = i.title; });
   const ent = (e, x) => `<div class="q"><span class="aic ${e.type}" style="width:38px;height:38px">${ic(e.type === 'in' ? 'up' : 'down', 18, 2.2)}</span><div class="m"><b>${e.type === 'in' ? '+' : '-'}${num(e.qty)} ${esc(nm[e.code] || e.code)}</b><small>${esc(dShort(e.date))}${e.msg ? ' - ' + esc(e.msg) : ''}</small></div><button class="x" data-act="${x}" data-id="${esc(e.id)}">Discard</button></div>`;
-  const installable = S.installEvt && !isStandalone();
-  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !isStandalone();
-  return `<div class="sethead">Stock sheet</div>
-    <div class="card group"><h2>Google Sheet connection</h2><p>Paste the Web app link that ends with /exec.</p>
-      <label class="field">${ic('file', 20)}<input id="url" type="url" inputmode="url" placeholder="https://script.google.com/macros/s/.../exec" value="${esc(S.url)}" data-bind="url" autocomplete="off"></label>
-      <div class="btns"><button class="btn" data-act="save-url">Save and sync</button>${CFG.scriptUrl && S.url !== CFG.scriptUrl ? '<button class="btn ghost" data-act="reset-url">Use default link</button>' : ''}</div>
-      <div class="kv" style="margin-top:8px"><span>Last sync</span><b>${S.synced ? esc(ago_(S.synced)) : 'Never'}</b></div>
+  const mu = store.get('money.url', '') || CFG.moneyUrl || '', u = moneyUser();
+  return `<div class="card conn"><div class="ch"><span class="gs">${ic('file', 30)}</span><div><b>Connection status</b><div class="stt st-${cc}"><i class="dot"></i>${cs}</div></div></div>
+      <div class="kv"><span>Last sync</span><b>${S.synced ? esc(ago_(S.synced)) : 'Never'}</b></div>
+      <div class="kv"><span>Stock sheet</span><b class="st-${S.url ? 'ok' : 'warn'}"><i class="dot"></i>${S.url ? 'Connected' : 'Not connected'}</b></div>
+      <div class="kv"><span>Payments sheet</span><b class="st-${mu ? 'ok' : 'warn'}"><i class="dot"></i>${mu ? 'Connected' : 'Not connected'}</b></div>
       ${S.error ? `<div class="banner bad" style="margin:8px 0 0">${esc(S.error)}</div>` : ''}</div>
-    <div class="sethead">Data on this phone</div>
-    <div class="card group"><h2>Waiting to sync</h2><p>${q.length ? 'Saved on this phone. They are sent to the sheet as soon as you are online.' : 'Everything is saved to the sheet.'}</p>
-      ${q.map((e) => ent(e, 'discard')).join('')}
-      ${q.length ? `<div class="btns"><button class="btn" data-act="sync">${ic('refresh', 18)}Sync now</button></div>` : ''}</div>
+    <button class="submit go" data-act="sync">${ic('refresh', 20)}Sync now</button>
+    <button class="btn ghost wide" data-act="togmanage">${ic('gear', 18)}Manage connection</button>
+    ${S.manage ? `<div class="card group"><h2>Stock sheet link</h2><p>Paste the Web app link that ends with /exec.</p>
+      <label class="field">${ic('file', 20)}<input id="url" type="url" inputmode="url" placeholder="https://script.google.com/macros/s/.../exec" value="${esc(S.url)}" data-bind="url" autocomplete="off"></label>
+      <div class="btns"><button class="btn" data-act="save-url">Save and sync</button>${CFG.scriptUrl && S.url !== CFG.scriptUrl ? '<button class="btn ghost" data-act="reset-url">Use default link</button>' : ''}</div></div>
+    <div class="card group"><h2>Payments sheet link</h2><p>${u ? 'Logged in as ' + esc(u.name) : 'Not logged in'}</p>
+      <label class="field">${ic('file', 20)}<input id="murl" placeholder="Payments Google Sheet link" value="${mu ? esc(mu.slice(0, 40)) + '…' : ''}" onfocus="this.value=''" autocomplete="off"></label>
+      <div class="btns"><button class="btn" data-m="saveurl">Test and save link</button>${u ? '<button class="btn ghost" data-m="logout">Log out</button>' : ''}</div></div>` : ''}
+    <div class="shead">Sync information</div>
+    <div class="card group"><div class="kv"><span>Pending changes</span><b>${q.length + store.get('rq', []).length}</b></div><div class="kv"><span>Items cached</span><b>${S.items.length}</b></div><div class="kv"><span>Movements cached</span><b>${S.history.length}</b></div></div>
+    ${q.length ? `<div class="card group"><h2>Waiting to sync</h2><p>Saved on this phone. They are sent to the sheet as soon as you are online.</p>${q.map((e) => ent(e, 'discard')).join('')}</div>` : ''}
     ${f.length ? `<div class="card group"><h2>Not saved</h2><p>The sheet rejected these entries. Fix the cause, then enter them again.</p>${f.map((e) => ent(e, 'discard-failed')).join('')}</div>` : ''}
-    <div class="sethead">App</div>
-    <div class="card group"><h2>App update</h2><p>You are using version v${APP_VER}. Update to get the newest features and fixes. Your saved entries are kept.</p>
-      <div class="btns"><button class="btn" data-act="upcheck">Update to latest version</button><button class="btn ghost" data-act="upforce">Clear cache and reload</button></div><div class="hint" id="upmsg"></div></div>
+    <div class="note ok">${ic('check', 18)}<span>All changes are saved on this phone first and synced to Google Sheets.</span></div>`;
+}
+function vSetInv() {
+  const d = store.get('itemsDef', 'all');
+  return `<div class="slist tlist">${swRow('alert', 'homeAlerts', true, 'Low stock alerts on Home', 'Show items that are running low on the Home screen')}${swRow('check', 'confirmStock', false, 'Confirm before saving', 'Ask once more before a Stock In or Stock Out is saved')}${swRow('pencil', 'reqNoteOut', false, 'Note required on Stock Out', 'Stock Out can only be saved with a note')}</div>`
+    + prefCard('cube', 'Items page opens with', segBtns('itemsDef', d, [['all', 'All items'], ['alert', 'Needs attention']]));
+}
+function vSetPay() {
+  const pm = store.get('payMode', 'last'), pd = store.get('payDate', 'today');
+  return prefCard('cash', 'Payment mode', segBtns('payMode', pm, [['last', 'Last used'], ['cash', 'Cash'], ['bank', 'Bank']]))
+    + prefCard('cal', 'Date on a new entry', segBtns('payDate', pd, [['today', 'Today'], ['yesterday', 'Yesterday']]))
+    + `<div class="slist tlist">${swRow('pencil', 'payReqNote', false, 'Note required', 'A payment can only be saved with a note')}${swRow('check', 'payConfirm', false, 'Confirm before saving', 'Ask once more before a payment is saved')}</div>`;
+}
+function vSetAdv() {
+  const installable = S.installEvt && !isStandalone(), ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !isStandalone();
+  return `<div class="shead">Local data</div>
+    <div class="card group"><div class="kv"><span>Items cached</span><b>${S.items.length}</b></div><div class="kv"><span>Movements cached</span><b>${S.history.length}</b></div>
+      <button class="btn ghost wide" data-act="refresh">${ic('refresh', 18)}Reload from sheet</button>
+      <button class="btn ghost wide danger" data-act="upforce">${ic('alert', 18)}Clear cache and reload</button>
+      <p class="subtle">This forgets the saved app files and loads fresh ones. Entries waiting to sync and everything in Google Sheets stay safe.</p></div>
+    <div class="slist tlist">${swRow('download', 'updAlert', true, 'Update reminder', 'Show a message on Home when a new version is available')}</div>
     <div class="card group"><h2>Install app</h2><p>${isStandalone() ? 'Installed. You are using the app version.' : installable ? 'Add ARTIME Stock to your home screen so it opens like a normal app.' : ios ? 'On iPhone: tap the Share button, then Add to Home Screen.' : 'Use your browser menu and choose Install app or Add to Home screen.'}</p>
-      ${installable ? `<div class="btns"><button class="btn" data-act="install">${ic('download', 18)}Install</button></div>` : ''}</div>
-    <div class="card group"><h2>This phone</h2><div class="kv"><span>App version</span><b>v${APP_VER}</b></div><div class="kv"><span>Items cached</span><b>${S.items.length}</b></div><div class="kv"><span>Movements cached</span><b>${S.history.length}</b></div>
-      <div class="btns"><button class="btn ghost" data-act="refresh">${ic('refresh', 18)}Reload from sheet</button></div></div>`;
+      ${installable ? `<div class="btns"><button class="btn" data-act="install">${ic('download', 18)}Install</button></div>` : ''}</div>`;
+}
+function vSetAbout() {
+  return `<div class="about"><div class="abicon">${ic('cube', 40, 1.8)}</div><h2>${esc(APP_NAME)}</h2><p>${esc(TAGLINE)}</p><span class="ver">Version v${APP_VER}</span></div>
+    <div class="card group"><h2>App update</h2><p>You are using version v${APP_VER}. Update to get the newest features and fixes. Your saved entries are kept.</p>
+      <div class="btns"><button class="btn" data-act="upcheck">Update to latest version</button></div><div class="hint" id="upmsg"></div></div>`;
 }
 
 /* ---------- Stock In / Out form ---------- */
@@ -992,6 +1124,8 @@ function updateFormDynamic() {
 async function submitForm(type) {
   if (S.busy) return;                       // ignore double taps while the popup is up
   const st = formState(type); if (!st.ok) return;
+  if (type === 'out' && store.get('reqNoteOut', false) && !String(st.f.note || '').trim()) { toast('Add a note for Stock Out', true); return; }
+  if (store.get('confirmStock', false) && !confirm('Save Stock ' + (type === 'in' ? 'In' : 'Out') + ': ' + st.row.title + ' × ' + num(st.q) + '?')) return;
   S.busy = true;
   const f = st.f;
   const e = { id: newId(), ts: Date.now(), type, code: st.row.code, qty: st.q, date: f.date || today(), party: (type === 'in' ? f.party : f.used).trim(), ref: f.ref.trim(), note: f.note.trim() };
@@ -1050,7 +1184,7 @@ function renderSheet() {
     const link = (href, icon, title, sub) => `<a class="mi" href="${href}">${ic(icon, 24)}<span><b>${title}</b><small>${sub}</small></span>${ic('right', 18)}</a>`;
     const al = items().filter((i) => i.st === 'out' || i.st === 'low').length;
     const td = today(); let tin = 0, tout = 0;
-    moves().forEach((e) => { if (e.date === td) { const q = Number(e.qty) || 0; if (e.type === 'in') { if (!isDial(e.code)) tin += q; } else tout += q; } });
+    expMoves().forEach((e) => { if (e.date === td) { const q = Number(e.qty) || 0; if (e.type === 'in') tin += q; else tout += q; } });
     const si = syncInfo(), nm = who();
     el.innerHTML = `<div class="scrim side" data-act="close"><aside class="drawer" role="dialog" aria-label="Menu">
       <div class="dh">${avatarHTML()}<div class="dn">${nm ? `<b>${esc(nm)}</b>` : '<a href="#/more"><b>Add your name</b></a>'}<small>${roleLine()}</small></div></div>
@@ -1112,10 +1246,18 @@ document.addEventListener('click', (ev) => {
     case 'refresh': refresh(); break;
     case 'lang': store.set('lang', v === 'hi' ? 'hi' : 'en'); document.documentElement.lang = lang(); render(); break;
     case 'add': S.sheet = { type: 'add' }; renderSheet(); break;
+    case 'setv': { const k = el.dataset.k; store.set(k, v); if (k === 'theme') applyTheme(); render(); break; }
+    case 'tog': { const k = el.dataset.k; store.set(k, !store.get(k, el.dataset.d === '1')); render(); break; }
+    case 'togmanage': S.manage = !S.manage; render(); break;
+    case 'saveprofile': {
+      const pn = $('#pname'), old = who(), m = store.get('avatars', {}) || {};
+      if (pn && !pn.readOnly) { const n = pn.value.trim(); store.set('by', n); if (n && old !== n && m[old] !== undefined) { m[n] = m[old]; store.set('avatars', m); } }
+      toast('Profile saved'); location.hash = '#/more'; break;
+    }
     case 'upcheck': checkUpdate(); break;
     case 'upforce': hardRefresh(); break;
     case 'payadd': S.sheet = { type: 'payadd' }; renderSheet(); break;
-    case 'avatar': { const m = store.get('avatars', {}) || {}, k = who() || '_'; if (v === '-1') delete m[k]; else m[k] = Number(v); store.set('avatars', m); render(); break; }
+    case 'avatar': { const pn = $('#pname'); if (pn && !pn.readOnly && pn.value.trim()) store.set('by', pn.value.trim()); const m = store.get('avatars', {}) || {}, k = who() || '_'; if (v === '-1') delete m[k]; else m[k] = Number(v); store.set('avatars', m); render(); break; }
     case 'menu': S.sheet = { type: 'menu' }; renderSheet(); break;
     case 'close': if (ev.target === el) { S.sheet = null; renderSheet(); } break;
     case 'open-item': S.sheet = { type: 'item', code: el.dataset.code }; renderSheet(); break;
@@ -1125,6 +1267,7 @@ document.addEventListener('click', (ev) => {
     case 'rrange': S.repRange = Number(v); render(); break;
     case 'rtype': S.repType = v; render(); break;
     case 'repshare': window.open('https://wa.me/?text=' + encodeURIComponent(repSummaryText()), '_blank'); break;
+    case 'repcsvitems': { const { nm } = repFiltered(), st = repStats(S.repRange); downloadCSV('stock-item-wise.csv', [['Item', 'Code', 'In', 'Out', 'Net']].concat(Object.entries(st.per).sort((x, y) => y[1].o - x[1].o).map(([c, p]) => [nm[c] || c, c, p.i, p.o, p.i - p.o]))); break; }
     case 'repcsv': { const { nm, list } = repFiltered(); downloadCSV('stock-report.csv', [['Date', 'Type', 'Item', 'Code', 'Quantity', 'Supplier / Used for', 'Reference', 'Note', 'By']].concat(list.map((e) => [e.date, isDial(e.code) ? 'Dial Out' : e.type === 'in' ? 'Stock In' : 'Stock Out', nm[e.code] || e.code, e.code, e.qty, e.party || '', e.ref || '', e.note || '', e.by || '']))); break; }
     case 'fcat': ensureForm(type).cat = v; render(); break;
     case 'fsize': ensureForm(type).size = v; render(); break;
@@ -1260,6 +1403,9 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadSW && !reloaded) { reloaded = true; location.reload(); } });
   window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
 }
+setTimeout(autoCheckUpdate, 4000);
+applyTheme();
+if (!location.hash || location.hash === '#' || location.hash === '#/') { const hs = store.get('home', 'home'); if (hs !== 'home') location.hash = '#/' + hs; }
 syncName();
 onRoute();
 lastVis = Date.now();
