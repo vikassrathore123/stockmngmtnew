@@ -105,6 +105,7 @@ const HI = {
   'Payment mode': 'भुगतान का तरीका', 'Last used': 'पिछला इस्तेमाल', 'Date on a new entry': 'नई एंट्री की तारीख', 'Note required': 'नोट ज़रूरी', 'A payment can only be saved with a note': 'भुगतान नोट के बिना सेव नहीं होगा', 'Ask once more before a payment is saved': 'भुगतान सेव करने से पहले एक बार और पूछें', 'Add a note': 'नोट लिखें',
   'Local data': 'लोकल डेटा', 'This forgets the saved app files and loads fresh ones. Entries waiting to sync and everything in Google Sheets stay safe.': 'यह सेव की हुई ऐप फ़ाइलें भुलाकर नई लोड करता है। सिंक के लिए रुकी एंट्री और Google Sheets का सारा डेटा सुरक्षित रहता है।', 'Update reminder': 'अपडेट की याद', 'Show a message on Home when a new version is available': 'नया वर्ज़न आने पर होम पर संदेश दिखाएँ', 'Update now': 'अभी अपडेट करें',
   'Log in to Payments': 'भुगतान में लॉगिन करें', 'Enter your PIN. Only the first time on this phone.': 'अपना PIN डालें। इस फ़ोन पर सिर्फ़ पहली बार।', 'Item-wise report': 'आइटम-वार रिपोर्ट', 'Dial Out counts every part that went out.': 'डायल आउट में निकले हर पार्ट की गिनती होती है।', 'Item': 'आइटम', 'In': 'इन', 'Out': 'आउट', 'Net': 'नेट', 'Excel': 'Excel', 'Today': 'आज',
+  'Pick 7 days or more to see the trend line.': 'ट्रेंड लाइन देखने के लिए 7 या ज़्यादा दिन चुनें।', 'Net': 'नेट', 'Needs attention': 'ध्यान चाहिए',
   'Payment In': 'पैसा आया', 'Payment Out': 'पैसा गया', 'Money received': 'मिला हुआ पैसा', 'Money paid': 'दिया हुआ पैसा', 'New payment': 'नया भुगतान',
   'Stock Overview': 'स्टॉक की स्थिति', 'Items and alerts': 'आइटम और अलर्ट', 'Items that are low or out of stock': 'जो आइटम कम या खत्म हैं', 'Received today': 'आज मिला', 'Paid today': 'आज दिया', 'Net today': 'आज का नेट',
   'Recent payments': 'हाल के भुगतान', 'Full report': 'पूरी रिपोर्ट', 'Log in to see payments': 'भुगतान देखने के लिए लॉगिन करें', 'Enter PIN': 'PIN डालें', 'Enter PIN to load totals': 'हिसाब लोड करने के लिए PIN डालें',
@@ -144,6 +145,7 @@ const HI = {
 };
 const trAge = (s) => s.replace(/^just now$/, 'अभी').replace(/^(\d+) min ago$/, '$1 मिनट पहले').replace(/^(\d+) h ago$/, '$1 घंटे पहले');
 const HI_RULES = [
+  [/^(\d+) out of stock$/, (m) => m[1] + ' स्टॉक खत्म'],
   [/^Last sync: (.+)$/, (m) => 'आख़िरी सिंक: ' + trAge(m[1])],
   [/^New version v(\d+) is ready$/, (m) => 'नया वर्ज़न v' + m[1] + ' तैयार है'],
   [/^Version v(\d+)$/, (m) => 'वर्ज़न v' + m[1]],
@@ -319,7 +321,7 @@ const S = {
   synced: store.get('synced', null),
   loading: false, syncing: false, error: '',
   filter: { q: '', cat: 'all', status: 'all' },
-  homeRange: 7, repRange: 7, repType: 'all', repQ: '',
+  homeRange: 7, repRange: 7, repType: 'all', repQ: '', repItem: '',
   form: {},
   sheet: null,
   busy: false,
@@ -615,7 +617,7 @@ function topForm(type) {
   return `<header class="top center"><a class="ibtn" href="#/home" aria-label="Back">${ic('left', 26)}</a>
     <div class="grow"><h1>Stock ${type === 'in' ? 'In' : 'Out'}</h1><div class="sub">${type === 'in' ? 'Add incoming stock to inventory' : 'Remove stock from inventory'}</div></div><span class="spacer"></span></header>`;
 }
-const APP_VER = 25;                                  // must match the cache number in sw.js
+const APP_VER = 26;                                  // must match the cache number in sw.js
 const payFirst = () => store.get('pref', 'stock') === 'pay';
 function syncInfo() {
   const n = S.queue.length;
@@ -721,17 +723,20 @@ function vHome() {
   const td = today(); let tin = 0, tout = 0;
   expMoves().forEach((e) => { if (e.date === td) { const q = Number(e.qty) || 0; if (e.type === 'in') tin += q; else tout += q; } });
   const alertN = its.filter((i) => i.st === 'out' || i.st === 'low').length, pt = payToday();
-  const hero = `<section class="hero"><div class="hh"><span>Today</span><small>${esc(dLong(td))}</small></div><div class="hm"><a href="#/reports?t=in&r=1"><b>+${num(tin)}</b><small>Stock in</small></a><a href="#/reports?t=out&r=1"><b>-${num(tout)}</b><small>Stock out</small></a><a href="#/reorder"><b>${alertN}</b><small>To reorder</small></a></div></section>`;
+  const hero = `<section class="today3"><div class="th"><span>Today</span><small>${esc(dLong(td))}</small></div><div class="tg">
+    <a class="tcard in" href="#/reports?t=in&r=1"><span class="ti">${ic('up', 22, 2.4)}</span><b>+${num(tin)}</b><small>Stock in</small></a>
+    <a class="tcard out" href="#/reports?t=out&r=1"><span class="ti">${ic('down', 22, 2.4)}</span><b>-${num(tout)}</b><small>Stock out</small></a>
+    <a class="tcard warn ${alertN ? 'urgent' : ''}" href="#/reorder"><span class="ti">${ic('alert', 22, 2.4)}</span><b>${alertN}</b><small>To reorder</small>${outN ? `<em>${outN} out of stock</em>` : ''}</a></div></section>`;
   const paycard = pt ? `<a class="card paytoday" href="#/payreport"><span class="ico">${ic('cash', 24)}</span><div class="pt"><small>Payments today</small><div class="pr"><b class="g">+${rupee(pt.i)}</b><b class="r">-${rupee(pt.o)}</b></div></div>${ic('right', 20)}</a>` : '';
   return `${updBar()}${showInstall ? `<div class="install"><span class="t"><b>Install ARTIME Stock</b><small>Opens full screen like a normal app</small></span><button data-act="install">Install</button></div>` : ''}
   ${hero}
-  ${paycard}
   <section class="stats">
     <a class="stat blue" href="#/items"><span class="ico">${ic('cube', 24)}</span><span><small>Total Items</small><b>${num(total)}</b></span></a>
     <a class="stat green" href="#/items?status=ok"><span class="ico">${ic('layers', 24)}</span><span><small>Total Stock</small><b>${num(stock)}</b></span></a>
     <a class="stat red" href="#/reorder"><span class="ico">${ic('alert', 26, 2.2)}</span><span><small>Out of Stock</small><b>${outN}</b></span></a>
     <a class="stat amber" href="#/reorder"><span class="ico">${ic('warn', 24, 2.1)}</span><span><small>Reorder Soon</small><b>${lowN}</b></span></a>
   </section>
+  ${paycard}
   ${store.get('homeAlerts', true) ? `<section class="card sec">
     <div class="sec-h"><h2>Low Stock Alerts</h2><a class="link" href="#/reorder">View All ${ic('right', 16, 2.4)}</a></div>
     ${alerts.length ? alerts.map((i) => itemRow(i)).join('') : `<div class="empty"><b>Nothing is running low</b>Items show here when they reach their reorder level.</div>`}
@@ -775,11 +780,12 @@ function actRow(e, nm) {
 }
 
 /* ---------- chart ---------- */
-function chartData(days) {
+function chartData(days, item) {
   const ds = []; for (let k = days - 1; k >= 0; k--) ds.push(ago(k));
   const m = {}; ds.forEach((d) => { m[d] = { i: 0, o: 0 }; });
   let ti = 0, to = 0;
-  moves().forEach((e) => { const b = m[e.date]; if (!b) return; const q = Number(e.qty) || 0; if (e.type === 'in') { b.i += q; ti += q; } else { b.o += q; to += q; } });
+  const src = item && isDial(item) ? moves().filter((e) => e.code === item) : expMoves().filter((e) => !item || e.code === item);   // a Dial Out counts every part that went
+  src.forEach((e) => { const b = m[e.date]; if (!b) return; const q = Number(e.qty) || 0; if (e.type === 'in') { b.i += q; ti += q; } else { b.o += q; to += q; } });
   return { ds, m, ti, to };
 }
 function niceStep(peak) {
@@ -787,27 +793,27 @@ function niceStep(peak) {
   const r = peak / p;
   return Math.max(1, (r <= 2 ? 0.5 : r <= 5 ? 1 : 2) * p);
 }
+function lineSVG(o) {                           // two lines over time: o = {ds, a, b, ca, cb, fmt, label}
+  const { ds, a: A, b: B } = o, n = ds.length, fmt = o.fmt || num, lab = o.label || dShort;
+  const peak = Math.max(1, ...A, ...B), step = niceStep(peak), top = Math.ceil(peak / step) * step;
+  const W = 360, H = 190, L = 40, R = 12, T = 10, B_ = 26, pw = W - L - R, ph = H - T - B_;
+  const X = (k) => (n === 1 ? L + pw / 2 : L + (pw * k) / (n - 1)), Y = (v) => T + ph - (v / top) * ph;
+  let g = '';
+  for (let v = 0; v <= top; v += step) { const y = Y(v); g += `<line x1="${L}" x2="${W - R}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}" style="stroke:var(--line)" stroke-width="1"/><text x="${L - 6}" y="${(y + 3.5).toFixed(1)}" text-anchor="end">${fmt(v)}</text>`; }
+  const path = (arr) => arr.map((v, k) => (k ? 'L' : 'M') + X(k).toFixed(1) + ' ' + Y(v).toFixed(1)).join(' ');
+  const line = (arr, col) => `<path d="${path(arr)} L${X(n - 1).toFixed(1)} ${(T + ph).toFixed(1)} L${X(0).toFixed(1)} ${(T + ph).toFixed(1)} Z" fill="${col}" opacity=".10"/><path d="${path(arr)}" fill="none" stroke="${col}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>`
+    + (n <= 16 ? arr.map((v, k) => `<circle cx="${X(k).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="3.2" fill="${col}" stroke="var(--card)" stroke-width="1.5"/>`).join('') : '');
+  const every = Math.ceil(n / 6);
+  ds.forEach((d, k) => { if ((n - 1 - k) % every === 0) g += `<text x="${X(k).toFixed(1)}" y="${H - 8}" text-anchor="middle">${esc(lab(d))}</text>`; });
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.aria || 'Trend over time')}">${g}${line(B, o.cb)}${line(A, o.ca)}</svg>`;
+}
+window.ARTIME_lineSVG = lineSVG;
 function chartBlock(c) {
   const { ds, m } = c;
-  const peak = Math.max(1, ...ds.map((d) => Math.max(m[d].i, m[d].o)));
-  const step = niceStep(peak), top = Math.ceil(peak / step) * step;
-  const W = 360, H = 190, L = 34, R = 6, T = 8, B = 26, pw = W - L - R, ph = H - T - B, gw = pw / ds.length;
-  const bw = Math.min(14, gw * (ds.length <= 7 ? 0.32 : 0.36));
-  let g = '';
-  for (let v = 0; v <= top; v += step) {
-    const y = T + ph - (v / top) * ph;
-    g += `<line x1="${L}" x2="${W - R}" y1="${y}" y2="${y}" stroke="#e7ebf1" stroke-width="1"/><text x="${L - 6}" y="${y + 3.5}" text-anchor="end">${num(v)}</text>`;
-  }
-  const every = Math.ceil(ds.length / 7);
-  ds.forEach((d, k) => {
-    const cx = L + gw * k + gw / 2;
-    const hi = (m[d].i / top) * ph, ho = (m[d].o / top) * ph;
-    if (m[d].i) g += `<rect x="${(cx - bw - 0.8).toFixed(1)}" y="${(T + ph - hi).toFixed(1)}" width="${bw.toFixed(1)}" height="${hi.toFixed(1)}" rx="2" fill="#2fae8a"/>`;
-    if (m[d].o) g += `<rect x="${(cx + 0.8).toFixed(1)}" y="${(T + ph - ho).toFixed(1)}" width="${bw.toFixed(1)}" height="${ho.toFixed(1)}" rx="2" fill="#ec5757"/>`;
-    if ((ds.length - 1 - k) % every === 0) g += `<text x="${cx}" y="${H - 8}" text-anchor="middle">${esc(dShort(d))}</text>`;
-  });
+  const chart = ds.length < 2 ? `<p class="subtle" style="margin:6px 16px 10px">Pick 7 days or more to see the trend line.</p>`
+    : `<div class="chart">${lineSVG({ ds, a: ds.map((d) => m[d].i), b: ds.map((d) => m[d].o), ca: '#2fae8a', cb: '#ec5757', aria: 'Stock in and out per day' })}</div>`;
   return `<div class="legend"><span><i style="background:#2fae8a"></i>Stock In</span><span><i style="background:#ec5757"></i>Stock Out</span></div>
-    <div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Stock in and out per day">${g}</svg></div>
+    ${chart}
     <div class="tot"><div><span class="aic in">${ic('up', 20, 2.2)}</span><span><small>Total In</small><b>${num(c.ti)}</b></span></div>
     <div><span class="aic out">${ic('down', 20, 2.2)}</span><span><small>Total Out</small><b>${num(c.to)}</b></span></div></div>`;
 }
@@ -823,11 +829,14 @@ function filtered() {
   });
 }
 function vItems() {
-  const f = S.filter;
-  const chip = (act, v, cur, label) => `<button class="chip ${v === cur ? 'on' : ''}" data-act="${act}" data-v="${v}">${label}</button>`;
-  return `<div class="search">${ic('search', 20)}<input id="q" type="search" placeholder="Search item or code" value="${esc(f.q)}" data-bind="q" autocomplete="off"></div>
-    <div class="chips">${chip('fc', 'all', f.cat, 'All')}${chip('fc', 'packing', f.cat, 'Packaging Items')}${chip('fc', 'clock', f.cat, 'Clock Items')}</div>
-    <div class="chips">${chip('fs', 'all', f.status, 'Any status')}${chip('fs', 'alert', f.status, 'Needs attention')}${chip('fs', 'out', f.status, 'Out of Stock')}${chip('fs', 'low', f.status, 'Reorder Soon')}${chip('fs', 'ok', f.status, 'In Stock')}</div>
+  const f = S.filter, base = items().filter((i) => f.cat === 'all' || i.cat === f.cat);
+  const n = { all: base.length, alert: 0, out: 0, low: 0, ok: 0 };
+  base.forEach((i) => { if (i.st === 'out') { n.out++; n.alert++; } else if (i.st === 'low') { n.low++; n.alert++; } else if (i.st === 'ok') n.ok++; });
+  const sc = (v, cls, label) => `<button class="sch ${cls} ${f.status === v ? 'on' : ''}" data-act="fs" data-v="${v}"><i></i>${label}<em>${n[v]}</em></button>`;
+  const opt = (v, label) => `<option value="${v}"${f.cat === v ? ' selected' : ''}>${label}</option>`;
+  return `<div class="itbar"><div class="search">${ic('search', 20)}<input id="q" type="search" placeholder="Search item or code" value="${esc(f.q)}" data-bind="q" autocomplete="off"></div>
+      <label class="catsel"><select data-bind="cat" aria-label="Category">${opt('all', 'All items')}${opt('packing', 'Packaging Items')}${opt('clock', 'Clock Items')}</select></label></div>
+    <div class="schips">${sc('all', 'any', 'Any status')}${sc('alert', 'warn', 'Needs attention')}${sc('out', 'out', 'Out of Stock')}${sc('low', 'low', 'Reorder Soon')}${sc('ok', 'ok', 'In Stock')}</div>
     <div id="itemlist">${itemListHTML()}</div>`;
 }
 function itemListHTML() {
@@ -854,25 +863,33 @@ function vCategories() {
 
 /* ---------- Reports ---------- */
 const REP_TYPES = [['all', 'All'], ['in', 'Stock In'], ['out', 'Stock Out'], ['dial', 'Dial Out']];
-function repStats(days) {
-  const from = ago(days - 1), per = {}, dials = { n: 0 };
-  moves().forEach((e) => { if (e.date >= from && isDial(e.code) && e.type === 'out') dials.n += Number(e.qty) || 0; });
-  expMoves().forEach((e) => {
-    if (e.date < from) return;
-    const q = Number(e.qty) || 0, p = per[e.code] || (per[e.code] = { i: 0, o: 0 });
-    if (e.type === 'in') p.i += q; else p.o += q;
-  });
-  let ti = 0, to = 0; Object.values(per).forEach((p) => { ti += p.i; to += p.o; });
-  return { per, ti, to, dials: dials.n };
+function repSrc(item) { return item && isDial(item) ? moves().filter((e) => e.code === item) : expMoves().filter((e) => !item || e.code === item); }
+function repStats(days, item) {
+  const from = ago(days - 1); let ti = 0, to = 0, dials = 0;
+  moves().forEach((e) => { if (e.date >= from && isDial(e.code) && e.type === 'out' && (!item || e.code === item)) dials += Number(e.qty) || 0; });
+  repSrc(item).forEach((e) => { if (e.date < from) return; const q = Number(e.qty) || 0; if (e.type === 'in') ti += q; else to += q; });
+  return { ti, to, dials };
+}
+function repTop(days, item) {                   // per item totals for "Most used" / "Most received"
+  const from = ago(days - 1), per = {};
+  repSrc(item).forEach((e) => { if (e.date < from) return; const q = Number(e.qty) || 0, p = per[e.code] || (per[e.code] = { i: 0, o: 0 }); if (e.type === 'in') p.i += q; else p.o += q; });
+  return per;
 }
 function repFiltered() {
   const nm = {}; items().forEach((i) => { nm[i.code] = i.title; });
-  const from = ago(S.repRange - 1), q = String(S.repQ || '').trim().toLowerCase();
-  const raw = sortMoves(moves().filter((e) => e.date >= from)), base = raw;
-  let list = raw;
-  if (S.repType === 'in') list = raw.filter((e) => e.type === 'in' && !isDial(e.code));
-  else if (S.repType === 'out') list = sortMoves(expMoves().filter((e) => e.date >= from && e.type === 'out'));
-  else if (S.repType === 'dial') list = raw.filter((e) => isDial(e.code));
+  const from = ago(S.repRange - 1), q = String(S.repQ || '').trim().toLowerCase(), item = S.repItem || '';
+  let base, list;
+  if (item) {
+    base = sortMoves(repSrc(item).filter((e) => e.date >= from)); list = base;
+    if (S.repType === 'in') list = base.filter((e) => e.type === 'in');
+    else if (S.repType === 'out') list = base.filter((e) => e.type === 'out');
+    else if (S.repType === 'dial') list = base.filter((e) => e.via || isDial(e.code));
+  } else {
+    const raw = sortMoves(moves().filter((e) => e.date >= from)); base = raw; list = raw;
+    if (S.repType === 'in') list = raw.filter((e) => e.type === 'in' && !isDial(e.code));
+    else if (S.repType === 'out') list = sortMoves(expMoves().filter((e) => e.date >= from && e.type === 'out'));
+    else if (S.repType === 'dial') list = raw.filter((e) => isDial(e.code));
+  }
   if (q) list = list.filter((e) => (String(nm[e.code] || '') + ' ' + e.code + ' ' + (e.party || '') + ' ' + (e.note || '') + ' ' + (e.ref || '')).toLowerCase().includes(q));
   return { nm, base, list };
 }
@@ -886,36 +903,32 @@ function repListHTML() {
   });
   return log;
 }
-function itemWiseHTML(per, nm) {
-  const rows = Object.entries(per).sort((x, y) => (y[1].o - x[1].o) || (y[1].i - x[1].i)).slice(0, 80);
-  if (!rows.length) return `<div class="empty"><b>No movements</b>Nothing recorded in this period.</div>`;
-  return `<div class="iw head"><span>Item</span><span>In</span><span>Out</span><span>Net</span></div>` + rows.map(([c, p]) => { const net = p.i - p.o; return `<div class="iw"><span class="in">${esc(nm[c] || c)}</span><b class="g">${p.i ? '+' + num(p.i) : '-'}</b><b class="r">${p.o ? '-' + num(p.o) : '-'}</b><b class="${net < 0 ? 'r' : net > 0 ? 'g' : ''}">${net > 0 ? '+' : ''}${num(net)}</b></div>`; }).join('');
-}
 function vReports() {
-  const { nm, list } = repFiltered();
-  const c = chartData(S.repRange), st = repStats(S.repRange);
-  const top = (k) => Object.entries(st.per).filter((x) => x[1][k] > 0).sort((x, y) => y[1][k] - x[1][k]).slice(0, 5).map((x) => [x[0], x[1][k]]);
+  const { nm, list } = repFiltered(), item = S.repItem || '';
+  const c = chartData(S.repRange, item), st = repStats(S.repRange, item), per = repTop(S.repRange, item);
+  const top = (k) => Object.entries(per).filter((x) => x[1][k] > 0).sort((x, y) => y[1][k] - x[1][k]).slice(0, 5).map((x) => [x[0], x[1][k]]);
   const tu = top('o'), tg = top('i');
   const chip = (v, label) => `<button class="chip ${S.repRange === v ? 'on' : ''}" data-act="rrange" data-v="${v}">${label}</button>`;
   const tchip = (v, label) => `<button class="chip ${S.repType === v ? 'on' : ''}" data-act="rtype" data-v="${v}">${label}</button>`;
   const bars = (arr, cls, sign) => arr.length ? arr.map(([code, q]) => `<div class="row plain"><div style="display:flex;justify-content:space-between;gap:10px"><b style="font-weight:600">${esc(nm[code] || code)}</b><b class="${cls}">${sign}${num(q)}</b></div><div class="bar ${cls === 'g' ? 'gb' : ''}"><i style="width:${Math.max(4, Math.round((q / arr[0][1]) * 100))}%"></i></div></div>`).join('') : `<div class="empty"><b>Nothing here</b>No entries in this period.</div>`;
+  const opts = items().slice().sort((x, y) => x.title.localeCompare(y.title)).map((i) => `<option value="${esc(i.code)}"${item === i.code ? ' selected' : ''}>${esc(i.title)}</option>`).join('');
+  const net = st.ti - st.to;
   return `<div class="chips" style="margin-top:0">${chip(1, 'Today')}${chip(7, 'Last 7 Days')}${chip(14, 'Last 14 Days')}${chip(30, 'Last 30 Days')}${chip(90, 'Last 90 Days')}</div>
-    <section class="rsum"><div class="g"><small>Stock In</small><b>+${num(st.ti)}</b></div><div class="r"><small>Stock Out</small><b>-${num(st.to)}</b></div><div class="b"><small>Dials made</small><b>${num(st.dials)}</b></div></section>
+    <label class="catsel wide"><span>${ic('cube', 18)}</span><select data-bind="repItem" aria-label="Item"><option value="">All items</option>${opts}</select></label>
+    <section class="rsum"><div class="g"><small>Stock In</small><b>+${num(st.ti)}</b></div><div class="r"><small>Stock Out</small><b>-${num(st.to)}</b></div>${item ? `<div class="${net < 0 ? 'r' : 'b'}"><small>Net</small><b>${net > 0 ? '+' : ''}${num(net)}</b></div>` : `<div class="b"><small>Dials made</small><b>${num(st.dials)}</b></div>`}</section>
     <div class="repact"><button class="btn ghost" data-act="repshare">${ic('send', 18)}Share summary</button><button class="btn ghost" data-act="repcsv">${ic('download', 18)}Download Excel (CSV)</button></div>
-    <div class="card sec" style="overflow:hidden"><div class="sec-h"><h2>Item-wise report</h2><button class="x" data-act="repcsvitems">${ic('download', 16)}Excel</button></div>
-      <p class="subtle" style="margin:0 16px 6px">Dial Out counts every part that went out.</p>${itemWiseHTML(st.per, nm)}</div>
     <div class="card sec">${chartBlock(c)}</div>
-    <div class="dual"><div class="card sec"><div class="sec-h"><h2>Most used</h2></div>${bars(tu, 'r', '-')}</div>
-    <div class="card sec"><div class="sec-h"><h2>Most received</h2></div>${bars(tg, 'g', '+')}</div></div>
+    ${item ? '' : `<div class="dual"><div class="card sec"><div class="sec-h"><h2>Most used</h2></div>${bars(tu, 'r', '-')}</div>
+    <div class="card sec"><div class="sec-h"><h2>Most received</h2></div>${bars(tg, 'g', '+')}</div></div>`}
     <div class="card sec" style="overflow:hidden"><div class="sec-h"><h2>All movements</h2><small class="cnt" id="repcnt">${list.length}</small></div>
       <div class="chips inner">${REP_TYPES.map((t) => tchip(t[0], t[1])).join('')}</div>
       <div class="search inner">${ic('search', 20)}<input id="rq" type="search" placeholder="Search item, supplier or note" value="${esc(S.repQ)}" data-bind="rq" autocomplete="off"></div>
       <div id="replist">${repListHTML()}</div></div>`;
 }
 function repSummaryText() {
-  const { nm } = repFiltered(), st = repStats(S.repRange);
-  const used = Object.entries(st.per).filter((x) => x[1].o > 0).sort((x, y) => y[1].o - x[1].o).slice(0, 5).map(([c, p]) => (nm[c] || c) + ' (' + num(p.o) + ')').join(', ');
-  return `${APP_NAME} Stock - ${S.repRange === 1 ? 'Today' : 'Last ' + S.repRange + ' days'}\nStock In: +${num(st.ti)}\nStock Out: -${num(st.to)}\nDials made: ${num(st.dials)}${used ? '\nMost used: ' + used : ''}`;
+  const { nm } = repFiltered(), item = S.repItem || '', st = repStats(S.repRange, item), per = repTop(S.repRange, item);
+  const used = Object.entries(per).filter((x) => x[1].o > 0).sort((x, y) => y[1].o - x[1].o).slice(0, 5).map(([c, p]) => (nm[c] || c) + ' (' + num(p.o) + ')').join(', ');
+  return `${APP_NAME} Stock${item ? ' - ' + (nm[item] || item) : ''} - ${S.repRange === 1 ? 'Today' : 'Last ' + S.repRange + ' days'}\nStock In: +${num(st.ti)}\nStock Out: -${num(st.to)}${item ? '' : '\nDials made: ' + num(st.dials)}${used && !item ? '\nMost used: ' + used : ''}`;
 }
 function downloadCSV(name, rows) {
   const csv = rows.map((r) => r.map((x) => '"' + String(x == null ? '' : x).replace(/"/g, '""') + '"').join(',')).join('\r\n');
@@ -1267,7 +1280,6 @@ document.addEventListener('click', (ev) => {
     case 'rrange': S.repRange = Number(v); render(); break;
     case 'rtype': S.repType = v; render(); break;
     case 'repshare': window.open('https://wa.me/?text=' + encodeURIComponent(repSummaryText()), '_blank'); break;
-    case 'repcsvitems': { const { nm } = repFiltered(), st = repStats(S.repRange); downloadCSV('stock-item-wise.csv', [['Item', 'Code', 'In', 'Out', 'Net']].concat(Object.entries(st.per).sort((x, y) => y[1].o - x[1].o).map(([c, p]) => [nm[c] || c, c, p.i, p.o, p.i - p.o]))); break; }
     case 'repcsv': { const { nm, list } = repFiltered(); downloadCSV('stock-report.csv', [['Date', 'Type', 'Item', 'Code', 'Quantity', 'Supplier / Used for', 'Reference', 'Note', 'By']].concat(list.map((e) => [e.date, isDial(e.code) ? 'Dial Out' : e.type === 'in' ? 'Stock In' : 'Stock Out', nm[e.code] || e.code, e.code, e.qty, e.party || '', e.ref || '', e.note || '', e.by || '']))); break; }
     case 'fcat': ensureForm(type).cat = v; render(); break;
     case 'fsize': ensureForm(type).size = v; render(); break;
@@ -1312,6 +1324,8 @@ document.addEventListener('change', (ev) => {
   const k = el.dataset.bind, r = route(), type = r.name;
   if (k === 'base') { const f = ensureForm(type); f.base = el.value; f.size = null; f.variant = null; render(); }
   else if (k === 'homeRange') { S.homeRange = Number(el.value); render(); }
+  else if (k === 'cat') { S.filter.cat = el.value; render(); }
+  else if (k === 'repItem') { S.repItem = el.value; render(); }
 });
 document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && S.sheet) { S.sheet = null; renderSheet(); } });
 window.addEventListener('hashchange', onRoute);
