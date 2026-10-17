@@ -6,9 +6,10 @@
   const g = (k, d) => { try { const v = localStorage.getItem(K + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } };
   const s = (k, v) => { try { localStorage.setItem(K + k, JSON.stringify(v)); } catch (e) { /* full */ } };
   const esc = (x) => String(x == null ? '' : x).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const rs = (n) => '₹' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+  const ag = (k, d) => { try { const v = localStorage.getItem('artime.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } };   // settings made in the app
+  const rs = (n) => '₹' + Number(n || 0).toLocaleString(ag('numfmt', 'in') === 'intl' ? 'en-US' : 'en-IN', { maximumFractionDigits: 2 });
   const M = { user: (() => { const u = g('user', null); return u && u.name ? u : null; })(), q: g('q', []), failed: g('failed', []), hist: g('hist', []), msg: '', type: g('type', 'in') === 'out' ? 'out' : 'in', mode: g('mode', 'cash') === 'bank' ? 'bank' : 'cash', bank: g('bank', ''),
-    view: 'entry', range: '7', rtype: 'all', racct: 'all', rq: '', pin: g('pin', null), rep: g('rep', null), repBusy: false, repErr: '' };
+    view: 'entry', range: '7', rtype: 'all', racct: 'all', rq: '', pin: g('pin', null), pinBuf: '', pinMode: 'login', rep: g('rep', null), repBusy: false, repErr: '' };
   const dev = g('dev', null) || (() => { const d = 'd' + Math.random().toString(36).slice(2, 10); s('dev', d); return d; })();
   const url = () => g('url', '') || (window.APP_CONFIG && APP_CONFIG.moneyUrl) || '';
   const keep = () => { s('q', M.q); s('failed', M.failed); s('hist', M.hist); s('user', M.user); s('pin', M.pin); };
@@ -74,18 +75,22 @@
     M.q.slice().reverse().forEach((e) => add(e.party)); M.hist.forEach((e) => add(e.party)); if (M.rep && M.rep.rows) M.rep.rows.forEach((r) => add(r[3]));
     return seen.slice(0, 8);
   };
+  const dotsHTML = () => { const n = M.pinBuf.length, t = Math.max(4, n); return Array.from({ length: t }, (_, i) => `<i class="${i < n ? 'f' : ''}"></i>`).join(''); };
+  function pinPad(mode, title, sub, err) {
+    M.pinMode = mode;
+    return `<div class="pinbox"><div class="lock">${ic('lock', 30)}</div><h2>${title}</h2><p>${sub}</p>
+      <div class="dots ${err && err !== 'Checking…' && !/^Checking/.test(err) ? 'shake' : ''}" id="m-dots">${dotsHTML()}</div>
+      <div class="hint bad" id="m-pmsg">${esc(err)}</div>
+      <div class="keypad">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((k) => `<button data-m="pk" data-v="${k}">${k}</button>`).join('')}<button class="alt" data-m="pk" data-v="del" aria-label="Delete">${ic('back', 26)}</button><button data-m="pk" data-v="0">0</button><button class="ok" data-m="pk" data-v="go" aria-label="Log in">${ic('check', 28, 2.6)}</button></div>
+      <button class="plink" data-m="ping">Test connection</button></div>`;
+  }
   const dayAgo = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return d.toLocaleDateString('en-CA'); };
 
   function draw() {
     const el = $('#money'); if (!el) return;
     try {
       if (!url()) { el.innerHTML = '<div class="card group"><h2>No payments sheet link yet</h2><p>Add the Payments Google Sheet link in Settings.</p><div class="btns"><a class="btn" href="#/more">Open Settings</a></div></div>'; return; }
-      if (!M.user) {
-        el.innerHTML = `<div class="form pay in"><div class="card group"><h2>Enter your PIN</h2><p>Only the first time on this phone.</p>
-          <div class="field"><input id="mpin" type="password" inputmode="numeric" enterkeyhint="go" autocomplete="off" placeholder="PIN"></div>
-          <div class="hint bad" id="m-pmsg">${esc(M.msg)}</div><div class="btns"><button class="btn" style="background:var(--green)" data-m="pin">Continue</button><button class="btn ghost" data-m="ping">Test connection</button></div></div></div>`;
-        return;
-      }
+      if (!M.user) { el.innerHTML = `<div class="form pay in">${pinPad('login', 'Log in to Payments', 'Enter your PIN. Only the first time on this phone.', M.msg)}</div>`; return; }
       const bl = banks(), ps = parties();
       if (!M.bank && bl[0]) M.bank = bl[0];
       const m = (v) => (M.mode === v ? 'on' : '');
@@ -108,7 +113,7 @@
           <label class="fl" for="m-note">Note <small>(optional)</small></label>
           <div class="field">${ic('pencil', 20)}<input id="m-note" placeholder="Add note..." autocomplete="off"></div>
           <label class="fl" for="m-date">Date</label>
-          <div class="field">${ic('cal', 20)}<input id="m-date" type="date" value="${today()}"></div>
+          <div class="field">${ic('cal', 20)}<input id="m-date" type="date" value="${dayAgo(ag('payDate', 'today') === 'yesterday' ? 1 : 0)}"></div>
           <div class="qchips left"><button data-m="dsel" data-v="0">Today</button><button data-m="dsel" data-v="1">Yesterday</button></div>
           <div class="hint bad" id="m-msg">${esc(M.msg)}</div>
           <button class="submit" id="m-submit" data-m="save"><span id="m-sl">${M.type === 'in' ? 'Save Payment In' : 'Save Payment Out'}</span></button>
@@ -175,7 +180,6 @@
       el.innerHTML = `<div class="pmbar" style="margin-top:2px"><span>${R ? (R.scope === 'all' ? 'Everyone\'s entries' : 'Your entries') : (M.repBusy ? 'Loading…' : (M.pin ? '' : 'Enter PIN to load totals'))}</span><button data-m="dashreload">${M.repBusy ? 'Loading…' : 'Refresh'}</button></div>
         <div class="pmhero ${net < 0 ? 'neg' : ''}" style="margin-top:6px"><small>Net today</small><b>${net < 0 ? '−' : ''}${rs(Math.abs(net))}</b>
           <div class="hrow"><div><small>Received today</small><b>${rs(tin)}</b></div><div><small>Paid today</small><b>${rs(tout)}</b></div></div></div>
-        <div class="acts" style="grid-template-columns:1fr 1fr;margin-top:12px"><a class="bigact in" href="#/pay?t=in">${ic('up', 30, 2.2)}<span><b>Payment In</b><small>Money received</small></span></a><a class="bigact out" href="#/pay?t=out">${ic('down', 30, 2.2)}<span><b>Payment Out</b><small>Money paid</small></span></a></div>
         ${names.length ? `<div class="sethead" style="margin:18px 2px 8px">Money in hand</div><div class="acctgrid">${names.map((n) => `<div class="acct ${n === 'Cash' ? 'cash' : 'bank'}"><span class="ai">${ic(n === 'Cash' ? 'cash' : 'bank', 20)}</span><small>${esc(n)}</small><b class="${bal[n] < 0 ? 'r' : ''}">${bal[n] < 0 ? '−' : ''}${rs(Math.abs(bal[n]))}</b></div>`).join('')}</div>` : ''}
         ${total7 ? `<div class="card sec" style="margin-top:12px"><div class="sec-h"><h2>Last 7 days</h2><a href="#/payreport">Full report</a></div><div style="padding:0 12px 12px">${payChart(days7, rows7)}</div></div>` : ''}
         <div class="card sec" style="margin-top:12px;overflow:hidden"><div class="sec-h" style="padding:14px 16px 4px"><h2>Recent payments</h2><a href="#/payreport">Full report</a></div>${recent.length ? recent.join('') : '<div class="empty"><b>No entries</b>Nothing recorded in this period.</div>'}</div>
@@ -245,12 +249,7 @@
     try {
       const waiting = M.q.filter((e) => e.u === M.user.name).length;
       const chips = `<div class="chips" style="margin-top:4px">${RANGES.map((r) => `<button class="chip ${M.range === r[0] ? 'on' : ''}" data-m="range" data-v="${r[0]}">${r[1]}</button>`).join('')}</div>`;
-      if (!M.pin) {
-        el.innerHTML = `<div class="card group" style="margin-top:14px"><h2>Enter your PIN to see reports</h2><p>Asked once, so the report can be read safely from the sheet.</p>
-          <div class="field"><input id="m-rpin" type="password" inputmode="numeric" enterkeyhint="go" autocomplete="off" placeholder="PIN"></div>
-          <div class="hint bad">${esc(M.repErr)}</div><div class="btns"><button class="btn" style="background:var(--green)" data-m="repin">Show report</button></div></div>`;
-        return;
-      }
+      if (!M.pin) { el.innerHTML = `<div class="form pay in">${pinPad('repin', 'Enter your PIN to see reports', 'Asked once, so the report can be read safely from the sheet.', M.repErr)}</div>`; return; }
       const B = repBase(), R = B && B.R;
       const bar = `<div class="pmbar"><span>${R ? (R.scope === 'all' ? 'Everyone\'s entries' : 'Your entries') + ' · updated ' + new Date(R.time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : ''}</span><button data-m="reload">${M.repBusy ? 'Loading…' : 'Refresh'}</button></div>`;
       const msg = (M.repErr ? `<div class="banner bad" style="margin-top:10px">${esc(M.repErr)}</div>` : '') + (waiting ? `<div class="banner" style="margin-top:10px">${waiting} ${waiting === 1 ? 'entry is' : 'entries are'} still waiting to sync and not in this report yet.</div>` : '');
@@ -304,12 +303,18 @@
       else if (a === 'repshare') window.open('https://wa.me/?text=' + encodeURIComponent(shareText()), '_blank');
       else if (a === 'repcsv') { const B = repBase(); if (B && window.ARTIME_csv) window.ARTIME_csv('payments-report.csv', [['Date', 'Type', 'Amount', 'Party', 'Account', 'Note', 'By']].concat(listRows(B.base).map((r) => [r[0], r[1] === 'in' ? 'Received' : 'Paid', r[2], r[3], r[4], r[5], r[6]]))); }
       else if (a === 'reload' || a === 'dashreload') loadReport(true);
-      else if (a === 'repin') {
-        const pin = String(($('#m-rpin') || {}).value || '').trim(); if (!pin) return;
+      else if (a === 'pk') {
+        const k = b.dataset.v;
+        if (k === 'del') M.pinBuf = M.pinBuf.slice(0, -1);
+        else if (k === 'go') { if (M.pinBuf) act(M.pinMode === 'repin' ? 'repin' : 'pin'); return; }
+        else if (M.pinBuf.length < 8) M.pinBuf += k;
+        const d = $('#m-dots'); if (d) { d.classList.remove('shake'); d.innerHTML = dotsHTML(); }
+      } else if (a === 'repin') {
+        const pin = M.pinBuf; if (!pin) return;
         M.repErr = 'Checking…'; drawReport();
         post({ action: 'login', pin, dev }).then((j) => {
-          if (j.ok && j.name === (M.user && M.user.name)) { M.pin = pin; M.repErr = ''; keep(); loadReport(); }
-          else { M.repErr = j.net ? 'No connection. Try again.' : (j.ok ? 'That PIN belongs to someone else.' : (j.error || 'Wrong PIN')); drawReport(); }
+          if (j.ok && j.name === (M.user && M.user.name)) { M.pin = pin; M.pinBuf = ''; M.repErr = ''; keep(); loadReport(); }
+          else { M.pinBuf = ''; M.repErr = j.net ? 'No connection. Try again.' : (j.ok ? 'That PIN belongs to someone else.' : (j.error || 'Wrong PIN')); drawReport(); }
         });
       } else if (a === 'mount') { M.msg = ''; draw(); sync(); }
       else if (a === 'close') { location.hash = '#/home'; }
@@ -329,14 +334,14 @@
         say2('Checking…');
         post({ action: 'ping' }).then((j) => say2(j.ok ? 'Payments sheet is reachable ✓' : (j.net ? netMsg(j) : j.error || 'Not reachable')));
       } else if (a === 'pin') {
-        const pin = ($('#mpin') || {}).value; if (!pin) return;
+        const pin = M.pinBuf; if (!pin) return;
         const t0 = Date.now(), el0 = $('#m-pmsg'); if (el0) el0.textContent = 'Checking…';
         const tick = setInterval(() => { const el = $('#m-pmsg'); if (el) el.textContent = 'Checking… ' + Math.round((Date.now() - t0) / 1000) + 's'; }, 1000);
         post({ action: 'login', pin, dev }).then((j) => {
           if (j.ok && !j.name) { M.msg = 'This PIN has no name in the Users tab. Type the name in the Name column.'; }
           else if (j.ok) { M.user = { name: j.name, bank: j.bank || '', admin: !!j.admin }; M.pin = pin; M.msg = ''; keep(); toast('Welcome ' + j.name); try { window.store.set('by', j.name); } catch (e) { /* ignore */ } sync(); if (window.ARTIME_render) setTimeout(window.ARTIME_render, 0); }
           else M.msg = j.net ? netMsg(j) : (j.error || 'Wrong PIN');
-        }).catch(() => { M.msg = 'Something went wrong. Try again.'; }).finally(() => { clearInterval(tick); draw(); });
+        }).catch(() => { M.msg = 'Something went wrong. Try again.'; }).finally(() => { clearInterval(tick); M.pinBuf = ''; draw(); });
       } else if (a === 'save') {
         const amt = parseFloat(String(($('#m-amt') || {}).value || '').replace(/,/g, ''));
         if (!(amt > 0)) { say('Enter an amount'); return; }
@@ -347,6 +352,8 @@
           M.bank = bank; s('bank', bank);
         }
         const val = (id) => String(($(id) || {}).value || '').trim();
+        if (ag('payReqNote', false) && !val('#m-note')) { say('Add a note'); return; }
+        if (ag('payConfirm', false) && !confirm((M.type === 'in' ? 'Payment In ' : 'Payment Out ') + rs(amt) + ' (' + bank + ')?')) return;
         M.q.push({ id: 'M' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), u: M.user.name, type: M.type, mode: M.mode, amount: amt, party: val('#m-party'), bank, note: val('#m-note'), date: val('#m-date') || today() });
         ['#m-amt', '#m-party', '#m-note'].forEach((id) => { const i = $(id); if (i) i.value = ''; });
         say(''); keep(); ui(); toast('Saved on this phone'); sync();          // saved on the phone first, uploaded in the background
@@ -362,11 +369,15 @@
       }
     } catch (e) { toast('Something went wrong in Payments. Your saved entries are safe.', true); }
   };
-  document.addEventListener('keydown', (ev) => { if (ev.key !== 'Enter' || !ev.target) return; if (ev.target.id === 'mpin') act('pin'); else if (ev.target.id === 'm-rpin') act('repin', ev.target); });
+  document.addEventListener('keydown', (ev) => {                 // typing on a computer keyboard works on the PIN pad too
+    if (!$('#m-dots') || ev.ctrlKey || ev.metaKey || ev.altKey) return;
+    const k = /^\d$/.test(ev.key) ? ev.key : ev.key === 'Backspace' ? 'del' : ev.key === 'Enter' ? 'go' : '';
+    if (k) { ev.preventDefault(); act('pk', { dataset: { v: k } }); }
+  });
   document.addEventListener('input', (ev) => {
     if (ev.target && ev.target.id === 'm-rq') { M.rq = ev.target.value; const B = repBase(), l = $('#m-replist'); if (B && l) { l.innerHTML = listHTML(B.base, B.R.scope); const n = $('#m-repcnt'); if (n) n.textContent = listRows(B.base).length; } return; } if (ev.target && ev.target.id === 'm-bank') { M.bank = ev.target.value; flip('#money [data-m="bank"]', M.bank); } });
   window.addEventListener('online', () => later(500));
-  window.Money = { act, boot: () => later(800), mount: (view, t) => { M.msg = ''; M.view = view === 'report' ? 'report' : 'entry'; if (t === 'in' || t === 'out') { M.type = t; s('type', t); } draw(); sync(); },
+  window.Money = { act, boot: () => later(800), mount: (view, t) => { M.msg = ''; M.view = view === 'report' ? 'report' : 'entry'; if (t === 'in' || t === 'out') { M.type = t; s('type', t); } const pm = ag('payMode', 'last'); if (pm === 'cash' || pm === 'bank') { M.mode = pm; s('mode', pm); } draw(); sync(); },
     warm: () => {                          // quietly fills Home's payments card; at most once per 5 minutes, never loops
       if (!M.user || !M.pin || M.repBusy || !navigator.onLine || Date.now() - (M.repTry || 0) < 300000) return;
       if (M.rep && M.rep.user === M.user.name && Date.now() - (M.repAt || 0) < 300000) return;
