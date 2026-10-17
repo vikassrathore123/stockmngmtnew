@@ -91,10 +91,6 @@
       const m = (v) => (M.mode === v ? 'on' : '');
       el.innerHTML = `<div class="form pay ${M.type}" id="m-form">
         <div class="pmwho"><span>Logged in as <b>${esc(M.user.name)}</b></span><button data-m="logout">Log out</button></div>
-        <div class="pmsw">
-          <button class="pmopt in ${M.type === 'in' ? 'on' : ''}" data-m="type" data-v="in">${ic('up', 28, 2.2)}<span><b>Payment In</b><small>Money received</small></span></button>
-          <button class="pmopt out ${M.type === 'out' ? 'on' : ''}" data-m="type" data-v="out">${ic('down', 28, 2.2)}<span><b>Payment Out</b><small>Money paid</small></span></button>
-        </div>
         <div id="m-entry" style="display:${M.view === 'entry' ? 'block' : 'none'}">
           <div class="pmamt"><label for="m-amt">Amount<i>*</i></label>
             <div class="big"><b>₹</b><input id="m-amt" inputmode="decimal" placeholder="0" autocomplete="off"></div>
@@ -173,10 +169,15 @@
       const names = Object.keys(bal).sort((x, y) => (x === 'Cash' ? -1 : y === 'Cash' ? 1 : x.localeCompare(y)));
       const row = (e, tag) => `<div class="pmrow" style="padding:10px 16px"><span class="pmi ${e.type}">${e.type === 'in' ? '+' : '−'}</span><div class="pmm"><b class="${e.type === 'in' ? 'g' : 'r'}">${rs(e.amount)}</b><small>${esc(e.bank || 'Cash')}${e.party ? ' · ' + esc(e.party) : ''}</small></div>${tag}</div>`;
       const recent = pend.slice().reverse().map((e) => row(e, '<span class="pmtag w">waiting</span>')).concat(R ? R.rows.slice(0, 6).map((r) => row({ type: r[1], amount: r[2], bank: r[4], party: r[3] }, `<span class="pmtag">${esc(r[0] === td ? 'Today' : dShort(r[0]))}</span>`)) : []).slice(0, 6);
-      el.innerHTML = `<div class="pmbar" style="margin-top:6px"><span>${R ? (R.scope === 'all' ? 'Everyone\'s entries' : 'Your entries') : (M.repBusy ? 'Loading…' : (M.pin ? '' : 'Enter PIN to load totals'))}</span><button data-m="dashreload">${M.repBusy ? 'Loading…' : 'Refresh'}</button></div>
-        <div class="pmsum"><div class="g"><small>Received today</small><b>${rs(tin)}</b></div><div class="r"><small>Paid today</small><b>${rs(tout)}</b></div><div class="${net < 0 ? 'r' : 'g'}"><small>Net today</small><b>${net < 0 ? '−' : ''}${rs(Math.abs(net))}</b></div></div>
+      const days7 = []; for (let k = 6; k >= 0; k--) days7.push(dayAgo(k));
+      const rows7 = (R ? R.rows : []).concat(pend.map((e) => [e.date, e.type, e.amount, e.party || '', e.bank || 'Cash', '', e.u]));
+      const total7 = rows7.filter((r) => days7.includes(r[0])).length;
+      el.innerHTML = `<div class="pmbar" style="margin-top:2px"><span>${R ? (R.scope === 'all' ? 'Everyone\'s entries' : 'Your entries') : (M.repBusy ? 'Loading…' : (M.pin ? '' : 'Enter PIN to load totals'))}</span><button data-m="dashreload">${M.repBusy ? 'Loading…' : 'Refresh'}</button></div>
+        <div class="pmhero ${net < 0 ? 'neg' : ''}" style="margin-top:6px"><small>Net today</small><b>${net < 0 ? '−' : ''}${rs(Math.abs(net))}</b>
+          <div class="hrow"><div><small>Received today</small><b>${rs(tin)}</b></div><div><small>Paid today</small><b>${rs(tout)}</b></div></div></div>
         <div class="acts" style="grid-template-columns:1fr 1fr;margin-top:12px"><a class="bigact in" href="#/pay?t=in">${ic('up', 30, 2.2)}<span><b>Payment In</b><small>Money received</small></span></a><a class="bigact out" href="#/pay?t=out">${ic('down', 30, 2.2)}<span><b>Payment Out</b><small>Money paid</small></span></a></div>
-        ${names.length ? `<div class="card group" style="margin-top:12px"><h2>Cash and banks</h2>${names.map((n) => `<div class="pmrow"><span class="pmi ${n === 'Cash' ? 'in' : 'md'}">${ic(n === 'Cash' ? 'cash' : 'bank', 18)}</span><div class="pmm"><b>${esc(n)}</b></div><div class="pmbal ${bal[n] < 0 ? 'r' : ''}"><small>Balance now</small><b>${bal[n] < 0 ? '−' : ''}${rs(Math.abs(bal[n]))}</b></div></div>`).join('')}</div>` : ''}
+        ${names.length ? `<div class="sethead" style="margin:18px 2px 8px">Money in hand</div><div class="acctgrid">${names.map((n) => `<div class="acct ${n === 'Cash' ? 'cash' : 'bank'}"><span class="ai">${ic(n === 'Cash' ? 'cash' : 'bank', 20)}</span><small>${esc(n)}</small><b class="${bal[n] < 0 ? 'r' : ''}">${bal[n] < 0 ? '−' : ''}${rs(Math.abs(bal[n]))}</b></div>`).join('')}</div>` : ''}
+        ${total7 ? `<div class="card sec" style="margin-top:12px"><div class="sec-h"><h2>Last 7 days</h2><a href="#/payreport">Full report</a></div><div style="padding:0 12px 12px">${payChart(days7, rows7)}</div></div>` : ''}
         <div class="card sec" style="margin-top:12px;overflow:hidden"><div class="sec-h" style="padding:14px 16px 4px"><h2>Recent payments</h2><a href="#/payreport">Full report</a></div>${recent.length ? recent.join('') : '<div class="empty"><b>No entries</b>Nothing recorded in this period.</div>'}</div>
         ${M.repErr ? `<div class="banner bad" style="margin-top:10px">${esc(M.repErr)}</div>` : ''}`;
     } catch (e) { /* dashboard problems must never block the app */ }
