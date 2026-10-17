@@ -7,8 +7,8 @@
   const s = (k, v) => { try { localStorage.setItem(K + k, JSON.stringify(v)); } catch (e) { /* full */ } };
   const esc = (x) => String(x == null ? '' : x).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const rs = (n) => '₹' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
-  const M = { user: (() => { const u = g('user', null); return u && u.name ? u : null; })(), q: g('q', []), failed: g('failed', []), hist: g('hist', []), msg: '', type: 'in', mode: g('mode', 'cash') === 'bank' ? 'bank' : 'cash', bank: g('bank', ''),
-    view: 'entry', range: '7', pin: g('pin', null), rep: g('rep', null), repBusy: false, repErr: '' };
+  const M = { user: (() => { const u = g('user', null); return u && u.name ? u : null; })(), q: g('q', []), failed: g('failed', []), hist: g('hist', []), msg: '', type: g('type', 'in') === 'out' ? 'out' : 'in', mode: g('mode', 'cash') === 'bank' ? 'bank' : 'cash', bank: g('bank', ''),
+    view: 'entry', range: '7', rtype: 'all', racct: 'all', rq: '', pin: g('pin', null), rep: g('rep', null), repBusy: false, repErr: '' };
   const dev = g('dev', null) || (() => { const d = 'd' + Math.random().toString(36).slice(2, 10); s('dev', d); return d; })();
   const url = () => g('url', '') || (window.APP_CONFIG && APP_CONFIG.moneyUrl) || '';
   const keep = () => { s('q', M.q); s('failed', M.failed); s('hist', M.hist); s('user', M.user); s('pin', M.pin); };
@@ -69,42 +69,56 @@
 
   const say = (m) => { M.msg = m; const el = $('#m-msg'); if (el) el.textContent = m; };
 
+  const parties = () => {                              // people you used recently: one tap to fill the name
+    const seen = [], add = (p) => { p = String(p || '').trim(); if (p && !seen.some((x) => x.toLowerCase() === p.toLowerCase())) seen.push(p); };
+    M.q.slice().reverse().forEach((e) => add(e.party)); M.hist.forEach((e) => add(e.party)); if (M.rep && M.rep.rows) M.rep.rows.forEach((r) => add(r[3]));
+    return seen.slice(0, 8);
+  };
+  const dayAgo = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return d.toLocaleDateString('en-CA'); };
+
   function draw() {
     const el = $('#money'); if (!el) return;
     try {
       if (!url()) { el.innerHTML = '<div class="card group"><h2>No payments sheet link yet</h2><p>Add the Payments Google Sheet link in Settings.</p><div class="btns"><a class="btn" href="#/more">Open Settings</a></div></div>'; return; }
       if (!M.user) {
-        el.innerHTML = `<div class="form pay"><div class="card group"><h2>Enter your PIN</h2><p>Only the first time on this phone.</p>
+        el.innerHTML = `<div class="form pay in"><div class="card group"><h2>Enter your PIN</h2><p>Only the first time on this phone.</p>
           <div class="field"><input id="mpin" type="password" inputmode="numeric" enterkeyhint="go" autocomplete="off" placeholder="PIN"></div>
           <div class="hint bad" id="m-pmsg">${esc(M.msg)}</div><div class="btns"><button class="btn" style="background:var(--green)" data-m="pin">Continue</button><button class="btn ghost" data-m="ping">Test connection</button></div></div></div>`;
         return;
       }
-      const bl = banks();
+      const bl = banks(), ps = parties();
       if (!M.bank && bl[0]) M.bank = bl[0];
-      const t = (v) => (M.type === v ? 'on' : ''), m = (v) => (M.mode === v ? 'on' : '');
-      el.innerHTML = `<div class="form pay">
+      const m = (v) => (M.mode === v ? 'on' : '');
+      el.innerHTML = `<div class="form pay ${M.type}" id="m-form">
         <div class="pmwho"><span>Logged in as <b>${esc(M.user.name)}</b></span><button data-m="logout">Log out</button></div>
-        <div id="m-entry" style="display:${M.view === 'entry' ? 'block' : 'none'}">
-        <div class="tabs"><button class="tab rcv ${t('in')}" data-m="type" data-v="in">${ic('up')}Received</button><button class="tab pd ${t('out')}" data-m="type" data-v="out">${ic('down')}Paid</button></div>
-        <label class="fl" for="m-amt">Amount<i>*</i></label>
-        <div class="field"><b class="rup">₹</b><input id="m-amt" inputmode="decimal" placeholder="0" autocomplete="off"></div>
-        <div class="fl">Cash or bank<i>*</i></div>
-        <div class="tabs"><button class="tab md ${m('cash')}" data-m="mode" data-v="cash">${ic('cash')}Cash</button><button class="tab md ${m('bank')}" data-m="mode" data-v="bank">${ic('bank')}Bank</button></div>
-        <div id="m-bankbox" style="display:${M.mode === 'bank' ? 'block' : 'none'}">
-          <label class="fl" for="m-bank">Which bank<i>*</i></label>
-          ${bl.length ? `<div class="sizes">${bl.map((b) => `<button class="size ${b === M.bank ? 'on' : ''}" data-m="bank" data-v="${esc(b)}">${esc(b)}</button>`).join('')}</div>` : ''}
-          <div class="field"${bl.length ? ' style="margin-top:8px"' : ''}>${ic('bank', 20)}<input id="m-bank" placeholder="Bank name" value="${esc(M.bank)}" autocomplete="off"></div>
+        <div class="pmsw">
+          <button class="pmopt in ${M.type === 'in' ? 'on' : ''}" data-m="type" data-v="in">${ic('up', 28, 2.2)}<span><b>Payment In</b><small>Money received</small></span></button>
+          <button class="pmopt out ${M.type === 'out' ? 'on' : ''}" data-m="type" data-v="out">${ic('down', 28, 2.2)}<span><b>Payment Out</b><small>Money paid</small></span></button>
         </div>
-        <label class="fl" for="m-party">Party / name</label>
-        <div class="field">${ic('truck', 20)}<input id="m-party" placeholder="Who paid or who was paid" autocomplete="off"></div>
-        <label class="fl" for="m-note">Note <small>(optional)</small></label>
-        <div class="field">${ic('pencil', 20)}<input id="m-note" placeholder="Add note..." autocomplete="off"></div>
-        <label class="fl" for="m-date">Date</label>
-        <div class="field">${ic('cal', 20)}<input id="m-date" type="date" value="${today()}"></div>
-        <div class="hint bad" id="m-msg">${esc(M.msg)}</div>
-        <button class="submit ${M.type === 'out' ? 'out' : ''}" id="m-submit" data-m="save"><span id="m-sl">${M.type === 'in' ? 'Save Received' : 'Save Paid'}</span></button>
-      <div id="m-list"></div></div>
-      <div id="m-rep" style="display:${M.view === 'report' ? 'block' : 'none'}"></div></div>`;
+        <div id="m-entry" style="display:${M.view === 'entry' ? 'block' : 'none'}">
+          <div class="pmamt"><label for="m-amt">Amount<i>*</i></label>
+            <div class="big"><b>₹</b><input id="m-amt" inputmode="decimal" placeholder="0" autocomplete="off"></div>
+            <div class="qchips"><button data-m="add" data-v="100">+100</button><button data-m="add" data-v="500">+500</button><button data-m="add" data-v="1000">+1,000</button><button data-m="add" data-v="5000">+5,000</button><button class="clr" data-m="add" data-v="0">Clear</button></div></div>
+          <div class="fl">Cash or bank<i>*</i></div>
+          <div class="pmmode"><button class="pmtile ${m('cash')}" data-m="mode" data-v="cash">${ic('cash', 26)}<b>Cash</b></button><button class="pmtile ${m('bank')}" data-m="mode" data-v="bank">${ic('bank', 26)}<b>Bank</b></button></div>
+          <div id="m-bankbox" style="display:${M.mode === 'bank' ? 'block' : 'none'}">
+            <label class="fl" for="m-bank">Which bank<i>*</i></label>
+            ${bl.length ? `<div class="sizes">${bl.map((b) => `<button class="size ${b === M.bank ? 'on' : ''}" data-m="bank" data-v="${esc(b)}">${esc(b)}</button>`).join('')}</div>` : ''}
+            <div class="field"${bl.length ? ' style="margin-top:8px"' : ''}>${ic('bank', 20)}<input id="m-bank" placeholder="Bank name" value="${esc(M.bank)}" autocomplete="off"></div>
+          </div>
+          <label class="fl" for="m-party">Party / name</label>
+          <div class="field">${ic('truck', 20)}<input id="m-party" placeholder="Who paid or who was paid" autocomplete="off"></div>
+          ${ps.length ? `<div class="qchips left">${ps.map((p) => `<button data-m="party" data-v="${esc(p)}">${esc(p)}</button>`).join('')}</div>` : ''}
+          <label class="fl" for="m-note">Note <small>(optional)</small></label>
+          <div class="field">${ic('pencil', 20)}<input id="m-note" placeholder="Add note..." autocomplete="off"></div>
+          <label class="fl" for="m-date">Date</label>
+          <div class="field">${ic('cal', 20)}<input id="m-date" type="date" value="${today()}"></div>
+          <div class="qchips left"><button data-m="dsel" data-v="0">Today</button><button data-m="dsel" data-v="1">Yesterday</button></div>
+          <div class="hint bad" id="m-msg">${esc(M.msg)}</div>
+          <button class="submit" id="m-submit" data-m="save"><span id="m-sl">${M.type === 'in' ? 'Save Payment In' : 'Save Payment Out'}</span></button>
+          <div id="m-list"></div>
+        </div>
+        <div id="m-rep" style="display:${M.view === 'report' ? 'block' : 'none'}"></div></div>`;
       ui(); drawReport(); if (M.view === 'report') loadReport();
     } catch (e) { el.innerHTML = '<div class="card group"><h2 class="r">Payments had a problem</h2><div class="btns"><button class="btn" data-m="mount">Retry</button></div></div>'; }
   }
@@ -166,38 +180,107 @@
         ${M.repErr ? `<div class="banner bad" style="margin-top:10px">${esc(M.repErr)}</div>` : ''}`;
     } catch (e) { /* dashboard problems must never block the app */ }
   }
+  /* data for the chosen period: rows in range (account filter applied), the previous period for comparison */
+  function datesOf(kind) {
+    const out = [], t = new Date();
+    if (M.range === 'today') { const d = new Date(t); d.setDate(d.getDate() - (kind === 'prev' ? 1 : 0)); out.push(d.toLocaleDateString('en-CA')); return out; }
+    if (M.range === 'month') {
+      const y = t.getFullYear(), mo = t.getMonth() - (kind === 'prev' ? 1 : 0), n = kind === 'prev' ? new Date(y, mo + 1, 0).getDate() : t.getDate();
+      for (let k = 1; k <= n; k++) out.push(new Date(y, mo, k, 12).toLocaleDateString('en-CA'));
+      return out;
+    }
+    const n = Number(M.range), off = kind === 'prev' ? n : 0;
+    for (let k = n - 1; k >= 0; k--) { const d = new Date(t); d.setDate(d.getDate() - k - off); out.push(d.toLocaleDateString('en-CA')); }
+    return out;
+  }
+  function repBase() {
+    const R = M.rep && M.rep.user === (M.user && M.user.name) ? M.rep : null; if (!R) return null;
+    const days = datesOf('cur'), pd = datesOf('prev'), ds = new Set(days), ps = new Set(pd);
+    const okA = (r) => M.racct === 'all' || r[4] === M.racct;
+    const base = R.rows.filter((r) => ds.has(r[0]) && okA(r)), prev = R.rows.filter((r) => ps.has(r[0]) && okA(r));
+    const sum = (rows, ty) => rows.reduce((s, r) => s + (r[1] === ty ? r[2] : 0), 0);
+    return { R, days, base, tin: sum(base, 'in'), tout: sum(base, 'out'), pin: sum(prev, 'in'), pout: sum(prev, 'out') };
+  }
+  function listRows(base) {
+    let l = base; if (M.rtype !== 'all') l = l.filter((r) => r[1] === M.rtype);
+    const q = String(M.rq || '').trim().toLowerCase();
+    if (q) l = l.filter((r) => (r[3] + ' ' + r[4] + ' ' + r[5] + ' ' + r[6]).toLowerCase().includes(q));
+    return l;
+  }
+  function listHTML(base, scope) {
+    const l = listRows(base); if (!l.length) return '<div class="empty"><b>No entries</b>Nothing recorded in this period.</div>';
+    let h = '', last = '';
+    l.slice(0, 150).forEach((r) => {
+      if (r[0] !== last) { last = r[0]; h += `<div class="daygroup">${esc(dRel(r[0]))}</div>`; }
+      h += `<div class="pmrow" style="padding:10px 16px"><span class="pmi ${r[1]}">${r[1] === 'in' ? '+' : '−'}</span><div class="pmm"><b class="${r[1] === 'in' ? 'g' : 'r'}">${rs(r[2])}</b><small>${esc(r[4])}${r[3] ? ' · ' + esc(r[3]) : ''}${scope === 'all' && r[6] ? ' · by ' + esc(r[6]) : ''}${r[5] ? ' · ' + esc(r[5]) : ''}</small></div></div>`;
+    });
+    return h;
+  }
+  function payChart(days, rows) {
+    const mm = {}; days.forEach((d) => { mm[d] = { i: 0, o: 0 }; });
+    rows.forEach((r) => { const b = mm[r[0]]; if (b) { if (r[1] === 'in') b.i += r[2]; else b.o += r[2]; } });
+    const peak = Math.max(1, ...days.map((d) => Math.max(mm[d].i, mm[d].o)));
+    const W = 360, H = 150, L = 4, T = 8, B = 22, pw = W - 2 * L, ph = H - T - B, gw = pw / days.length, bw = Math.max(2, Math.min(13, gw * 0.36));
+    let bars = '';
+    days.forEach((d, k) => {
+      const cx = L + gw * k + gw / 2, hi = (mm[d].i / peak) * ph, ho = (mm[d].o / peak) * ph;
+      if (hi > 0) bars += `<rect x="${(cx - bw - 0.5).toFixed(1)}" y="${(T + ph - hi).toFixed(1)}" width="${bw.toFixed(1)}" height="${hi.toFixed(1)}" rx="2" style="fill:var(--green)"/>`;
+      if (ho > 0) bars += `<rect x="${(cx + 0.5).toFixed(1)}" y="${(T + ph - ho).toFixed(1)}" width="${bw.toFixed(1)}" height="${ho.toFixed(1)}" rx="2" style="fill:var(--red)"/>`;
+    });
+    const lab = (k) => `<text x="${(L + gw * k + gw / 2).toFixed(1)}" y="${H - 6}" text-anchor="middle" font-size="11" style="fill:var(--mute)">${esc(dShort(days[k]))}</text>`;
+    const marks = days.length > 2 ? lab(0) + lab(Math.floor(days.length / 2)) + lab(days.length - 1) : days.map((d, k) => lab(k)).join('');
+    return `<svg viewBox="0 0 ${W} ${H}" class="pmchart" role="img" aria-label="Received and paid per day"><line x1="${L}" x2="${W - L}" y1="${T + ph}" y2="${T + ph}" style="stroke:var(--line)"/>${bars}${marks}</svg>
+      <div class="pmleg"><span><i class="g"></i>Received</span><span><i class="r"></i>Paid</span></div>`;
+  }
+  const delta = (cur, prev) => {
+    if (M.range === 'today' && false) return '';
+    if (!prev) return cur > 0 ? '<em>new</em>' : '';
+    const p = Math.round(((cur - prev) / prev) * 100); return `<em>${p >= 0 ? '▲' : '▼'} ${Math.abs(p)}%</em>`;
+  };
+  const periodName = () => ({ today: 'Today', 7: 'Last 7 days', 30: 'Last 30 days', month: 'This month' }[M.range]);
   function drawReport() {
     const el = $('#m-rep'); if (!el || !M.user) return;
     try {
       const waiting = M.q.filter((e) => e.u === M.user.name).length;
-      const chips = `<div class="chips" style="margin-top:14px">${RANGES.map((r) => `<button class="chip ${M.range === r[0] ? 'on' : ''}" data-m="range" data-v="${r[0]}">${r[1]}</button>`).join('')}</div>`;
+      const chips = `<div class="chips" style="margin-top:4px">${RANGES.map((r) => `<button class="chip ${M.range === r[0] ? 'on' : ''}" data-m="range" data-v="${r[0]}">${r[1]}</button>`).join('')}</div>`;
       if (!M.pin) {
         el.innerHTML = `<div class="card group" style="margin-top:14px"><h2>Enter your PIN to see reports</h2><p>Asked once, so the report can be read safely from the sheet.</p>
           <div class="field"><input id="m-rpin" type="password" inputmode="numeric" enterkeyhint="go" autocomplete="off" placeholder="PIN"></div>
           <div class="hint bad">${esc(M.repErr)}</div><div class="btns"><button class="btn" style="background:var(--green)" data-m="repin">Show report</button></div></div>`;
         return;
       }
-      const R = M.rep && M.rep.user === M.user.name ? M.rep : null;
+      const B = repBase(), R = B && B.R;
       const bar = `<div class="pmbar"><span>${R ? (R.scope === 'all' ? 'Everyone\'s entries' : 'Your entries') + ' · updated ' + new Date(R.time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : ''}</span><button data-m="reload">${M.repBusy ? 'Loading…' : 'Refresh'}</button></div>`;
       const msg = (M.repErr ? `<div class="banner bad" style="margin-top:10px">${esc(M.repErr)}</div>` : '') + (waiting ? `<div class="banner" style="margin-top:10px">${waiting} ${waiting === 1 ? 'entry is' : 'entries are'} still waiting to sync and not in this report yet.</div>` : '');
-      if (!R) { el.innerHTML = chips + bar + msg + `<div class="card empty" style="margin-top:12px"><b>${M.repBusy ? 'Loading report…' : 'No report yet'}</b>${M.repBusy ? '' : 'Tap Refresh to load it from the sheet.'}</div>`; return; }
-      const rows = R.rows.filter((r) => inRange(r[0]));
-      let tin = 0, tout = 0; const acc = {};
-      rows.forEach((r) => { const a = acc[r[4]] || (acc[r[4]] = { in: 0, out: 0 }); a[r[1]] += r[2]; if (r[1] === 'in') tin += r[2]; else tout += r[2]; });
-      Object.keys(R.totals || {}).forEach((k) => { if (!acc[k]) acc[k] = { in: 0, out: 0 }; });
-      const names = Object.keys(acc).sort((x, y) => (x === 'Cash' ? -1 : y === 'Cash' ? 1 : x.localeCompare(y)));
-      const bal = tin - tout;
-      const summary = `<div class="pmsum"><div class="g"><small>Received</small><b>${rs(tin)}</b></div><div class="r"><small>Paid</small><b>${rs(tout)}</b></div><div class="${bal < 0 ? 'r' : 'g'}"><small>Balance</small><b>${bal < 0 ? '−' : ''}${rs(Math.abs(bal))}</b></div></div>`;
-      const accHTML = names.length ? `<div class="card group" style="margin-top:12px"><h2>Cash and banks</h2><p>Received and paid in this period. Right side = balance now (all time).</p>${names.map((n) => {
-        const tt = (R.totals && R.totals[n]) || { in: 0, out: 0 }, nb = tt.in - tt.out;
-        return `<div class="pmrow"><span class="pmi ${n === 'Cash' ? 'in' : 'md'}">${ic(n === 'Cash' ? 'cash' : 'bank', 18)}</span><div class="pmm"><b>${esc(n)}</b><small><span class="g">+${rs(acc[n].in)}</span> &nbsp; <span class="r">−${rs(acc[n].out)}</span></small></div><div class="pmbal ${nb < 0 ? 'r' : ''}"><small>Balance now</small><b>${nb < 0 ? '−' : ''}${rs(Math.abs(nb))}</b></div></div>`; }).join('')}</div>` : '';
-      let list = '', last = '';
-      rows.slice(0, 150).forEach((r) => {
-        if (r[0] !== last) { last = r[0]; list += `<div class="daygroup">${esc(dRel(r[0]))}</div>`; }
-        list += `<div class="pmrow" style="padding:10px 16px"><span class="pmi ${r[1]}">${r[1] === 'in' ? '+' : '−'}</span><div class="pmm"><b class="${r[1] === 'in' ? 'g' : 'r'}">${rs(r[2])}</b><small>${esc(r[4])}${r[3] ? ' · ' + esc(r[3]) : ''}${R.scope === 'all' && r[6] ? ' · by ' + esc(r[6]) : ''}${r[5] ? ' · ' + esc(r[5]) : ''}</small></div></div>`;
-      });
-      el.innerHTML = chips + bar + msg + summary + accHTML + `<div class="card sec" style="margin-top:12px;overflow:hidden"><div class="sec-h" style="padding:14px 16px 4px"><h2>Entries</h2></div>${rows.length ? list : '<div class="empty"><b>No entries</b>Nothing recorded in this period.</div>'}</div>`;
+      if (!B) { el.innerHTML = chips + bar + msg + `<div class="card empty" style="margin-top:12px"><b>${M.repBusy ? 'Loading report…' : 'No report yet'}</b>${M.repBusy ? '' : 'Tap Refresh to load it from the sheet.'}</div>`; return; }
+      const accts = Object.keys(R.totals || {}).sort((x, y) => (x === 'Cash' ? -1 : y === 'Cash' ? 1 : x.localeCompare(y)));
+      const acc = {}; B.base.forEach((r) => { const a = acc[r[4]] || (acc[r[4]] = { in: 0, out: 0 }); a[r[1]] += r[2]; });
+      const bal = B.tin - B.tout;
+      const hero = `<div class="pmhero ${bal < 0 ? 'neg' : ''}"><small>Balance for ${esc(periodName())}</small><b>${bal < 0 ? '−' : ''}${rs(Math.abs(bal))}</b>
+        <div class="hrow"><div><small>Received</small><b>${rs(B.tin)}</b>${delta(B.tin, B.pin)}</div><div><small>Paid</small><b>${rs(B.tout)}</b>${delta(B.tout, B.pout)}</div></div><div class="hnote">${M.range === 'today' ? 'Compared with yesterday' : 'Compared with the period before'}</div></div>`;
+      const acctChips = accts.length > 1 ? `<div class="chips" style="margin-top:10px"><button class="chip ${M.racct === 'all' ? 'on' : ''}" data-m="racct" data-v="all">All accounts</button>${accts.map((n) => `<button class="chip ${M.racct === n ? 'on' : ''}" data-m="racct" data-v="${esc(n)}">${esc(n)}</button>`).join('')}</div>` : '';
+      const chart = M.range === 'today' ? '' : `<div class="card sec" style="margin-top:12px"><div class="sec-h"><h2>Day by day</h2></div><div style="padding:0 12px 12px">${payChart(B.days, B.base)}</div></div>`;
+      const accHTML = Object.keys(acc).length || accts.length ? `<div class="card group" style="margin-top:12px"><h2>Cash and banks</h2><p>Received and paid in this period. Right side = balance now (all time).</p>${accts.concat(Object.keys(acc).filter((k) => !accts.includes(k))).map((n) => {
+        const tt = (R.totals && R.totals[n]) || { in: 0, out: 0 }, nb = tt.in - tt.out, a = acc[n] || { in: 0, out: 0 };
+        return `<div class="pmrow"><span class="pmi ${n === 'Cash' ? 'in' : 'md'}">${ic(n === 'Cash' ? 'cash' : 'bank', 18)}</span><div class="pmm"><b>${esc(n)}</b><small><span class="g">+${rs(a.in)}</span> &nbsp; <span class="r">−${rs(a.out)}</span></small></div><div class="pmbal ${nb < 0 ? 'r' : ''}"><small>Balance now</small><b>${nb < 0 ? '−' : ''}${rs(Math.abs(nb))}</b></div></div>`; }).join('')}</div>` : '';
+      const agg = {}; B.base.forEach((r) => { const p = String(r[3] || '').trim(); if (!p) return; const x = agg[p] || (agg[p] = { i: 0, o: 0 }); x[r[1] === 'in' ? 'i' : 'o'] += r[2]; });
+      const tp = Object.entries(agg).sort((x, y) => (y[1].i + y[1].o) - (x[1].i + x[1].o)).slice(0, 5), mx = tp.length ? tp[0][1].i + tp[0][1].o : 1;
+      const parts = tp.length ? `<div class="card sec" style="margin-top:12px"><div class="sec-h"><h2>Top parties</h2></div>${tp.map(([n, v]) => `<div class="row plain"><div style="display:flex;justify-content:space-between;gap:10px"><b style="font-weight:600">${esc(n)}</b><span><b class="g">+${rs(v.i)}</b> <b class="r">−${rs(v.o)}</b></span></div><div class="bar"><i style="width:${Math.max(4, Math.round(((v.i + v.o) / mx) * 100))}%"></i></div></div>`).join('')}</div>` : '';
+      const tch = (v, l) => `<button class="chip ${M.rtype === v ? 'on' : ''}" data-m="rtype" data-v="${v}">${l}</button>`;
+      el.innerHTML = chips + acctChips + bar + msg + hero
+        + `<div class="repact"><button class="btn ghost" data-m="repshare">${ic('send', 18)}Share summary</button><button class="btn ghost" data-m="repcsv">${ic('download', 18)}Download Excel (CSV)</button></div>`
+        + chart + accHTML + parts
+        + `<div class="card sec" style="margin-top:12px;overflow:hidden"><div class="sec-h" style="padding:14px 16px 4px"><h2>Entries</h2><small class="cnt" id="m-repcnt">${listRows(B.base).length}</small></div>
+          <div class="chips inner">${tch('all', 'All')}${tch('in', 'Received')}${tch('out', 'Paid')}</div>
+          <div class="search inner">${ic('search', 20)}<input id="m-rq" type="search" placeholder="Search party, bank or note" value="${esc(M.rq)}" autocomplete="off"></div>
+          <div id="m-replist">${listHTML(B.base, R.scope)}</div></div>`;
     } catch (e) { el.innerHTML = '<div class="card empty"><b>Report could not be shown</b></div>'; }
+  }
+  function shareText() {
+    const B = repBase(); if (!B) return '';
+    const acc = {}; B.base.forEach((r) => { const a = acc[r[4]] || (acc[r[4]] = { in: 0, out: 0 }); a[r[1]] += r[2]; });
+    const nm = (window.APP_CONFIG && APP_CONFIG.appName) || 'ARTIME';
+    return `${nm} Payments - ${periodName()}\nReceived: ${rs(B.tin)}\nPaid: ${rs(B.tout)}\nBalance: ${rs(B.tin - B.tout)}` + Object.keys(acc).map((k) => `\n${k}: +${rs(acc[k].in)} / -${rs(acc[k].out)}`).join('');
   }
 
   function flip(sel, val) { document.querySelectorAll(sel).forEach((b) => b.classList.toggle('on', b.dataset.v === val)); }
@@ -211,6 +294,13 @@
         if (e1) e1.style.display = M.view === 'entry' ? 'block' : 'none'; if (e2) e2.style.display = M.view === 'report' ? 'block' : 'none';
         if (M.view === 'report') { drawReport(); loadReport(); }
       } else if (a === 'range') { M.range = b.dataset.v; drawReport(); }
+      else if (a === 'rtype') { M.rtype = b.dataset.v; drawReport(); }
+      else if (a === 'racct') { M.racct = b.dataset.v; drawReport(); }
+      else if (a === 'add') { const i = $('#m-amt'); if (!i) return; const n = Number(b.dataset.v); i.value = n ? String((parseFloat(String(i.value).replace(/,/g, '')) || 0) + n) : ''; }
+      else if (a === 'party') { const i = $('#m-party'); if (i) i.value = b.dataset.v; }
+      else if (a === 'dsel') { const i = $('#m-date'); if (i) i.value = dayAgo(Number(b.dataset.v)); }
+      else if (a === 'repshare') window.open('https://wa.me/?text=' + encodeURIComponent(shareText()), '_blank');
+      else if (a === 'repcsv') { const B = repBase(); if (B && window.ARTIME_csv) window.ARTIME_csv('payments-report.csv', [['Date', 'Type', 'Amount', 'Party', 'Account', 'Note', 'By']].concat(listRows(B.base).map((r) => [r[0], r[1] === 'in' ? 'Received' : 'Paid', r[2], r[3], r[4], r[5], r[6]]))); }
       else if (a === 'reload' || a === 'dashreload') loadReport(true);
       else if (a === 'repin') {
         const pin = String(($('#m-rpin') || {}).value || '').trim(); if (!pin) return;
@@ -222,11 +312,9 @@
       } else if (a === 'mount') { M.msg = ''; draw(); sync(); }
       else if (a === 'close') { location.hash = '#/home'; }
       else if (a === 'type') {                              // switch in place, so typed text is never lost
-        M.type = b.dataset.v; flip('#money [data-m="type"]', M.type);
-        const sb = $('#m-submit'), sl = $('#m-sl');
-        if (sb) sb.classList.toggle('out', M.type === 'out'); if (sl) sl.textContent = M.type === 'in' ? 'Save Received' : 'Save Paid';
-        const h1 = document.querySelector('header.top h1'), sub = document.querySelector('header.top .sub');
-        if (h1 && $('#m-entry')) { h1.textContent = M.type === 'in' ? 'Payment In' : 'Payment Out'; if (sub) sub.textContent = M.type === 'in' ? 'Money received' : 'Money paid'; }
+        M.type = b.dataset.v; s('type', M.type); flip('#money [data-m="type"]', M.type);
+        const fm = $('#m-form'), sl = $('#m-sl'); if (fm) { fm.classList.remove('in', 'out'); fm.classList.add(M.type); }
+        if (sl) sl.textContent = M.type === 'in' ? 'Save Payment In' : 'Save Payment Out';
       } else if (a === 'mode') {
         M.mode = b.dataset.v; s('mode', M.mode); flip('#money [data-m="mode"]', M.mode);
         const bx = $('#m-bankbox'); if (bx) bx.style.display = M.mode === 'bank' ? 'block' : 'none';
@@ -273,8 +361,10 @@
     } catch (e) { toast('Something went wrong in Payments. Your saved entries are safe.', true); }
   };
   document.addEventListener('keydown', (ev) => { if (ev.key !== 'Enter' || !ev.target) return; if (ev.target.id === 'mpin') act('pin'); else if (ev.target.id === 'm-rpin') act('repin', ev.target); });
-  document.addEventListener('input', (ev) => { if (ev.target && ev.target.id === 'm-bank') { M.bank = ev.target.value; flip('#money [data-m="bank"]', M.bank); } });
+  document.addEventListener('input', (ev) => {
+    if (ev.target && ev.target.id === 'm-rq') { M.rq = ev.target.value; const B = repBase(), l = $('#m-replist'); if (B && l) { l.innerHTML = listHTML(B.base, B.R.scope); const n = $('#m-repcnt'); if (n) n.textContent = listRows(B.base).length; } return; } if (ev.target && ev.target.id === 'm-bank') { M.bank = ev.target.value; flip('#money [data-m="bank"]', M.bank); } });
   window.addEventListener('online', () => later(500));
-  window.Money = { act, boot: () => later(800), mount: (view, t) => { M.msg = ''; M.view = view === 'report' ? 'report' : 'entry'; M.type = t === 'out' ? 'out' : 'in'; draw(); sync(); },
+  window.Money = { act, boot: () => later(800), mount: (view, t) => { M.msg = ''; M.view = view === 'report' ? 'report' : 'entry'; if (t === 'in' || t === 'out') { M.type = t; s('type', t); } draw(); sync(); },
+    warm: () => { if (M.user && M.pin && !M.repBusy && navigator.onLine && (!M.rep || Date.now() - (M.repAt || 0) > 300000)) loadReport(true).then(() => { if (window.ARTIME_render && /^#?\/?(home)?$/.test(location.hash)) window.ARTIME_render(); }); },
     dash: () => { M.msg = ''; drawDash(); loadReport(); sync(); } };
 })();
