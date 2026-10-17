@@ -574,7 +574,7 @@ function topForm(type) {
   return `<header class="top center"><a class="ibtn" href="#/home" aria-label="Back">${ic('left', 26)}</a>
     <div class="grow"><h1>Stock ${type === 'in' ? 'In' : 'Out'}</h1><div class="sub">${type === 'in' ? 'Add incoming stock to inventory' : 'Remove stock from inventory'}</div></div><span class="spacer"></span></header>`;
 }
-const APP_VER = 23;                                  // must match the cache number in sw.js
+const APP_VER = 24;                                  // must match the cache number in sw.js
 const payFirst = () => store.get('pref', 'stock') === 'pay';
 function syncInfo() {
   const n = S.queue.length;
@@ -1308,14 +1308,23 @@ function openReorder(code, fresh, note) {
 function openBulk(gi) {
   const g = BULK[gi]; if (!g) return;
   const rows = g.rows.map(({ i, r }) => ({ i, r, qty: Math.max(1, Math.round((r && r.qty) || (Number(i.min) * 2 - Number(i.eff)) || 1)), on: true }));
+  // The sheet's own message is used ONCE: the words before the item part open the message, the words after it close it.
+  const withRow = g.rows.find((x) => x.r && x.r.msg);
+  const tmpl = String((withRow && withRow.r.msg) || store.get('rmsg', '') || 'Hello {supplier}, please send {item} - {qty} {unit}. - ' + APP_NAME);
+  const itemRe = /\{\s*(item|qty|quantity|unit|units)\s*\}/gi;
+  let first = -1, last = -1, mm;
+  while ((mm = itemRe.exec(tmpl))) { if (first < 0) first = mm.index; last = mm.index + mm[0].length; }
+  const fill = (t) => t.replace(/\{\s*supplier\s*\}/gi, g.supplier || '').replace(/\{\s*date\s*\}/gi, dRel(today()));
+  const head = fill(first < 0 ? tmpl : tmpl.slice(0, first)).replace(/\s+,/g, ',').trim() || (g.supplier ? 'Hello ' + g.supplier + ',' : 'Hello,');
+  const tail = first < 0 ? '' : fill(tmpl.slice(last)).replace(/^[\s.,;:]+/, '').trim();
   const build = () => {
     const sel = rows.filter((x) => x.on && x.qty > 0);
-    return (g.supplier ? 'Hello ' + g.supplier + ',' : 'Hello,') + ' please send the following:\n' + sel.map((x, k) => (k + 1) + '. ' + ((x.r && x.r.sname) || x.i.title) + ' - ' + x.qty + ' ' + String(unitLabel(x.i.unit)).toLowerCase()).join('\n') + '\n- ' + APP_NAME;
+    return head + '\n' + sel.map((x, k) => (k + 1) + '. ' + ((x.r && x.r.sname) || x.i.title) + ' - ' + x.qty + ' ' + String(unitLabel(x.i.unit)).toLowerCase()).join('\n') + (tail ? '\n' + tail : '');
   };
   let el = document.getElementById('rs'); if (!el) { el = document.createElement('div'); el.id = 'rs'; document.body.appendChild(el); }
   el.innerHTML = `<div class="rsb" data-rx="close"><div class="rsc" onclick="event.stopPropagation()"><div class="grab"></div>
     <h3>Order all from ${esc(g.supplier || 'supplier')}</h3><small>Tick the items and set the quantities</small>
-    <div class="bl">${rows.map((x, k) => `<div class="bi"><input type="checkbox" data-k="${k}" checked aria-label="Include"><span class="bn"><b>${esc(x.i.title)}</b><small>Stock ${num(x.i.eff)} · Min ${num(x.i.min)}</small></span><input class="bq" type="number" inputmode="decimal" data-k="${k}" value="${x.qty}"></div>`).join('')}</div>
+    <div class="bl">${rows.map((x, k) => `<div class="bi"><input type="checkbox" data-k="${k}" checked aria-label="Include"><span class="bn"><b>${esc((x.r && x.r.sname) || x.i.title)}</b><small>${x.r && x.r.sname && x.r.sname !== x.i.title ? esc(x.i.title) + ' · ' : ''}Stock ${num(x.i.eff)} · Min ${num(x.i.min)}</small></span><input class="bq" type="number" inputmode="decimal" data-k="${k}" value="${x.qty}"></div>`).join('')}</div>
     <label>Message</label><textarea id="btxt" rows="6">${esc(build())}</textarea>
     <button class="go" data-rx="bsend" data-g="${gi}">Send on WhatsApp</button><button class="rcancel" data-rx="close">Cancel</button></div></div>`;
   const upd = (e) => { const k = Number(e.target.dataset.k); if (Number.isNaN(k) || !rows[k]) return; if (e.target.type === 'checkbox') rows[k].on = e.target.checked; else rows[k].qty = parseFloat(e.target.value) || 0; document.getElementById('btxt').value = build(); };
