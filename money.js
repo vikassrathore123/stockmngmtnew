@@ -225,18 +225,9 @@
   function payChart(days, rows) {
     const mm = {}; days.forEach((d) => { mm[d] = { i: 0, o: 0 }; });
     rows.forEach((r) => { const b = mm[r[0]]; if (b) { if (r[1] === 'in') b.i += r[2]; else b.o += r[2]; } });
-    const peak = Math.max(1, ...days.map((d) => Math.max(mm[d].i, mm[d].o)));
-    const W = 360, H = 150, L = 4, T = 8, B = 22, pw = W - 2 * L, ph = H - T - B, gw = pw / days.length, bw = Math.max(2, Math.min(13, gw * 0.36));
-    let bars = '';
-    days.forEach((d, k) => {
-      const cx = L + gw * k + gw / 2, hi = (mm[d].i / peak) * ph, ho = (mm[d].o / peak) * ph;
-      if (hi > 0) bars += `<rect x="${(cx - bw - 0.5).toFixed(1)}" y="${(T + ph - hi).toFixed(1)}" width="${bw.toFixed(1)}" height="${hi.toFixed(1)}" rx="2" style="fill:var(--green)"/>`;
-      if (ho > 0) bars += `<rect x="${(cx + 0.5).toFixed(1)}" y="${(T + ph - ho).toFixed(1)}" width="${bw.toFixed(1)}" height="${ho.toFixed(1)}" rx="2" style="fill:var(--red)"/>`;
-    });
-    const lab = (k) => `<text x="${(L + gw * k + gw / 2).toFixed(1)}" y="${H - 6}" text-anchor="middle" font-size="11" style="fill:var(--mute)">${esc(dShort(days[k]))}</text>`;
-    const marks = days.length > 2 ? lab(0) + lab(Math.floor(days.length / 2)) + lab(days.length - 1) : days.map((d, k) => lab(k)).join('');
-    return `<svg viewBox="0 0 ${W} ${H}" class="pmchart" role="img" aria-label="Received and paid per day"><line x1="${L}" x2="${W - L}" y1="${T + ph}" y2="${T + ph}" style="stroke:var(--line)"/>${bars}${marks}</svg>
-      <div class="pmleg"><span><i class="g"></i>Received</span><span><i class="r"></i>Paid</span></div>`;
+    const svg = days.length < 2 ? '<p class="subtle" style="margin:6px 4px 10px">Pick 7 days or more to see the trend line.</p>'
+      : (window.ARTIME_lineSVG ? window.ARTIME_lineSVG({ ds: days, a: days.map((d) => mm[d].i), b: days.map((d) => mm[d].o), ca: '#16a34a', cb: '#dc2626', fmt: (v) => Number(v).toLocaleString(ag('numfmt', 'in') === 'intl' ? 'en-US' : 'en-IN'), label: dShort, aria: 'Received and paid per day' }) : '');
+    return `<div class="chart">${svg}</div><div class="pmleg"><span><i class="g"></i>Received</span><span><i class="r"></i>Paid</span></div>`;
   }
   const delta = (cur, prev) => {
     if (M.range === 'today' && false) return '';
