@@ -106,6 +106,11 @@ const HI = {
   'Local data': 'लोकल डेटा', 'This forgets the saved app files and loads fresh ones. Entries waiting to sync and everything in Google Sheets stay safe.': 'यह सेव की हुई ऐप फ़ाइलें भुलाकर नई लोड करता है। सिंक के लिए रुकी एंट्री और Google Sheets का सारा डेटा सुरक्षित रहता है।', 'Update reminder': 'अपडेट की याद', 'Show a message on Home when a new version is available': 'नया वर्ज़न आने पर होम पर संदेश दिखाएँ', 'Update now': 'अभी अपडेट करें',
   'Log in to Payments': 'भुगतान में लॉगिन करें', 'Enter your PIN. Only the first time on this phone.': 'अपना PIN डालें। इस फ़ोन पर सिर्फ़ पहली बार।', 'Item-wise report': 'आइटम-वार रिपोर्ट', 'Dial Out counts every part that went out.': 'डायल आउट में निकले हर पार्ट की गिनती होती है।', 'Item': 'आइटम', 'In': 'इन', 'Out': 'आउट', 'Net': 'नेट', 'Excel': 'Excel', 'Today': 'आज',
   'Pick 7 days or more to see the trend line.': 'ट्रेंड लाइन देखने के लिए 7 या ज़्यादा दिन चुनें।', 'Net': 'नेट', 'Needs attention': 'ध्यान चाहिए',
+  'Anime': 'एनिमे', 'Classic': 'क्लासिक', 'Change this entry': 'यह एंट्री बदलें', 'Save changes': 'बदलाव सेव करें', 'Delete entry': 'एंट्री मिटाएँ', 'Delete this entry?': 'यह एंट्री मिटाएँ?', 'Entry updated': 'एंट्री बदल गई', 'Entry deleted': 'एंट्री मिट गई', 'Saving…': 'सेव हो रहा है…',
+  'Reference No.': 'रेफ़रेंस नंबर', 'How many dials': 'कितने डायल', 'The 30 minutes to change this entry are over': 'इस एंट्री को बदलने के 30 मिनट पूरे हो गए', 'Open the Report tab and enter your PIN once, then try again.': 'रिपोर्ट टैब खोलकर एक बार PIN डालें, फिर कोशिश करें।',
+  'No internet. Try again when you are online.': 'इंटरनेट नहीं है। ऑनलाइन होने पर फिर कोशिश करें।', 'Could not save the change.': 'बदलाव सेव नहीं हो सका।', 'Your bank accounts': 'आपके बैंक खाते', '(set in the sheet)': '(शीट में तय)',
+  'No bank account is set for you in the sheet.': 'शीट में आपके लिए कोई बैंक खाता तय नहीं है।', 'No bank account is set for you in the sheet. Ask the admin to add it in the Users tab (Bank column).': 'शीट में आपके लिए कोई बैंक खाता तय नहीं है। एडमिन से Users टैब (Bank कॉलम) में जुड़वाएँ।',
+  'This bank is not set for you in the Users tab': 'यह बैंक Users टैब में आपके लिए तय नहीं है', 'Person': 'व्यक्ति', 'Period': 'अवधि', 'Account': 'खाता', 'Everyone': 'सभी', 'My entries': 'मेरी एंट्री',
   'Payment In': 'पैसा आया', 'Payment Out': 'पैसा गया', 'Money received': 'मिला हुआ पैसा', 'Money paid': 'दिया हुआ पैसा', 'New payment': 'नया भुगतान',
   'Stock Overview': 'स्टॉक की स्थिति', 'Items and alerts': 'आइटम और अलर्ट', 'Items that are low or out of stock': 'जो आइटम कम या खत्म हैं', 'Received today': 'आज मिला', 'Paid today': 'आज दिया', 'Net today': 'आज का नेट',
   'Recent payments': 'हाल के भुगतान', 'Full report': 'पूरी रिपोर्ट', 'Log in to see payments': 'भुगतान देखने के लिए लॉगिन करें', 'Enter PIN': 'PIN डालें', 'Enter PIN to load totals': 'हिसाब लोड करने के लिए PIN डालें',
@@ -145,6 +150,9 @@ const HI = {
 };
 const trAge = (s) => s.replace(/^just now$/, 'अभी').replace(/^(\d+) min ago$/, '$1 मिनट पहले').replace(/^(\d+) h ago$/, '$1 घंटे पहले');
 const HI_RULES = [
+  [/^by (.+)$/, (m) => m[1] + ' द्वारा'],
+  [/^(\d+) min$/, (m) => m[1] + ' मिनट'],
+  [/^(.+) · by (.+) · you can change it for (\d+) more min$/, (m) => T(m[1]) + ' · ' + m[2] + ' द्वारा · ' + m[3] + ' मिनट और बदल सकते हैं'],
   [/^(\d+) out of stock$/, (m) => m[1] + ' स्टॉक खत्म'],
   [/^Last sync: (.+)$/, (m) => 'आख़िरी सिंक: ' + trAge(m[1])],
   [/^New version v(\d+) is ready$/, (m) => 'नया वर्ज़न v' + m[1] + ' तैयार है'],
@@ -563,7 +571,7 @@ function hardRefresh() {                       // forget the saved app files and
   Promise.all(jobs).catch(() => {}).then(() => location.replace(location.pathname + '?v=' + Date.now() + location.hash));
 }
 async function checkUpdate() {
-  const say = (t) => { const m = $('#upmsg'); if (m) m.textContent = t; };
+  const say = (t) => { const m = $('#upmsg'); if (m) m.innerHTML = (/^(Checking|Updating)/.test(t) ? '<i class="clk"></i>' : '') + esc(t); };
   say('Checking…');
   try {
     const t = await (await fetch('sw.js?x=' + Date.now(), { cache: 'no-store' })).text(), mm = /artime-stock-v(\d+)/.exec(t), v = mm ? Number(mm[1]) : 0;
@@ -617,7 +625,7 @@ function topForm(type) {
   return `<header class="top center"><a class="ibtn" href="#/home" aria-label="Back">${ic('left', 26)}</a>
     <div class="grow"><h1>Stock ${type === 'in' ? 'In' : 'Out'}</h1><div class="sub">${type === 'in' ? 'Add incoming stock to inventory' : 'Remove stock from inventory'}</div></div><span class="spacer"></span></header>`;
 }
-const APP_VER = 26;                                  // must match the cache number in sw.js
+const APP_VER = 27;                                  // must match the cache number in sw.js
 const payFirst = () => store.get('pref', 'stock') === 'pay';
 function syncInfo() {
   const n = S.queue.length;
@@ -631,7 +639,7 @@ function syncInfo() {
 }
 function syncLine() {
   const { cls, txt } = syncInfo();
-  return `<button class="syncline ${cls}" data-act="sync"><span class="pip"></span>${esc(txt)}</button>`;
+  return `<button class="syncline ${cls}" data-act="sync">${cls === 'busy' ? '<i class="clk"></i>' : '<span class="pip"></span>'}${esc(txt)}</button>`;
 }
 function ago_(ms) {
   const m = Math.round((Date.now() - ms) / 60000);
@@ -659,13 +667,69 @@ function navHTML(name) {
 const AVATARS = [['🦁', '#f59e0b', '#ef4444'], ['🐯', '#fb923c', '#f43f5e'], ['🐼', '#64748b', '#1e293b'], ['🦊', '#fb923c', '#c2410c'], ['🐻', '#a16207', '#78350f'], ['🦉', '#8b5cf6', '#4338ca'],
   ['🐬', '#06b6d4', '#1d4ed8'], ['🦄', '#ec4899', '#8b5cf6'], ['🚀', '#3b82f6', '#1e3a8a'], ['🎯', '#ef4444', '#7f1d1d'], ['🌟', '#facc15', '#f97316'], ['🌈', '#34d399', '#3b82f6'],
   ['⚡', '#fbbf24', '#d97706'], ['🌸', '#f472b6', '#be185d'], ['🍀', '#4ade80', '#15803d'], ['🔥', '#fb7185', '#dc2626']];
+/* ---- original anime-style characters (drawn here, not taken from any show) ---- */
+// Original anime-style characters (not copied from any show): a face, eyes, hair style and one accessory each.
+function animeSVG(c) {
+  const skin = c.skin || '#ffe3cf', hair = c.hair, shade = c.shade || 'rgba(0,0,0,.14)', eye = c.eye, out = c.out || '#4f6df5';
+  const eyes = [25, 39].map((x) => `<ellipse cx="${x}" cy="36.5" rx="3.9" ry="4.9" fill="#fff"/><ellipse cx="${x}" cy="37" rx="2.9" ry="4.1" fill="${eye}"/><ellipse cx="${x}" cy="37.4" rx="1.5" ry="2.5" fill="#1b1b2b"/><circle cx="${x - 1.1}" cy="35.2" r="1.25" fill="#fff"/><circle cx="${x + 1}" cy="39" r=".6" fill="#fff"/><path d="M${x - 4.6} 33.6 Q${x} 30.6 ${x + 4.6} 33.6" fill="none" stroke="#2a2233" stroke-width="1.5" stroke-linecap="round"/>`).join('');
+  const brows = `<path d="M20.5 29.5 Q25 27.6 29 29.2M35 29.2 Q39 27.6 43.5 29.5" fill="none" stroke="${hair}" stroke-width="1.3" stroke-linecap="round"/>`;
+  const face = `<ellipse cx="18.2" cy="37" rx="2.2" ry="3" fill="${skin}"/><ellipse cx="45.8" cy="37" rx="2.2" ry="3" fill="${skin}"/><rect x="28" y="44" width="8" height="10" fill="${skin}"/><rect x="28" y="44" width="8" height="4" fill="${shade}"/><path d="M17 36 C17 24 23 19 32 19 C41 19 47 24 47 36 C47 45 40 50.5 32 50.5 C24 50.5 17 45 17 36Z" fill="${skin}"/>`;
+  const cheeks = `<ellipse cx="22" cy="42" rx="3" ry="1.7" fill="#ff8fa3" opacity=".42"/><ellipse cx="42" cy="42" rx="3" ry="1.7" fill="#ff8fa3" opacity=".42"/>`;
+  const mouth = c.grin ? `<path d="M28.5 44.6 Q32 49 35.5 44.6 Z" fill="#7a2e3a"/>` : `<path d="M29 45 Q32 47.4 35 45" fill="none" stroke="#b5483f" stroke-width="1.3" stroke-linecap="round"/>`;
+  const body = `<path d="M8 66 C8 55 20 50.5 32 50.5 C44 50.5 56 55 56 66Z" fill="${out}"/><path d="M26 50.6 L32 57 L38 50.6" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.6" stroke-linejoin="round"/>`;
+  const bangs = `M16 37 C14 20 23 12 32 12 C41 12 50 20 48 37 C46.5 31 44 27.5 40.5 25.5 C38 29 34 29.5 31.5 25 C29 28.5 24.5 29 23.4 25.4 C19.6 27.4 17.4 31.5 16 37Z`;
+  let back = '', front = `<path d="${bangs}" fill="${hair}"/><path d="M24 22.5 C28 19.5 36 19.5 40 22.5" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="1.6" stroke-linecap="round"/>`, acc = '';
+  switch (c.style) {
+    case 'spiky':
+      front = `<path d="M15.5 38 C12 22 19 11 32 10 C45 11 52 22 48.5 38 C47 32 44.5 28 41 25.5 L39 30 L35 24 L31.5 30 L27 24.5 L24 30 L21 25.5 C18 28 16.5 33 15.5 38Z" fill="${hair}"/><path d="M19 15 L12 3 L27 10Z M29 11 L31 -2 L38 10Z M39 11 L50 2 L47 16Z M45 20 L58 14 L49 27Z M19 21 L6 17 L16 29Z" fill="${hair}"/>`; break;
+    case 'twin':
+      back = `<ellipse cx="9.5" cy="44" rx="6.2" ry="15" fill="${hair}" transform="rotate(12 9.5 44)"/><ellipse cx="54.5" cy="44" rx="6.2" ry="15" fill="${hair}" transform="rotate(-12 54.5 44)"/><path d="M14 38 C12 14 52 14 50 38Z" fill="${hair}"/>`;
+      acc = `<circle cx="14" cy="27" r="3.2" fill="${c.acc || '#ff3b6b'}"/><circle cx="50" cy="27" r="3.2" fill="${c.acc || '#ff3b6b'}"/>`; break;
+    case 'long':
+      back = `<path d="M13 40 C10 8 54 8 51 40 L55 66 L9 66Z" fill="${hair}"/>`;
+      acc = c.acc ? `<path d="M44 20 l1.6 3.4 3.7.5 -2.7 2.6 .7 3.7 -3.3 -1.8 -3.3 1.8 .7 -3.7 -2.7 -2.6 3.7 -.5z" fill="${c.acc}"/>` : ''; break;
+    case 'pony':
+      back = `<path d="M44 20 C60 14 66 34 56 50 C58 36 52 28 44 28Z" fill="${hair}"/><path d="M14 38 C12 14 52 14 50 38Z" fill="${hair}"/>`;
+      acc = `<circle cx="47" cy="22.5" r="3" fill="${c.acc || '#ff9f1c'}"/>`; break;
+    case 'messy':
+      front = `<circle cx="22.5" cy="16.5" r="7" fill="${hair}"/><circle cx="32" cy="12.5" r="8" fill="${hair}"/><circle cx="41.5" cy="16.5" r="7" fill="${hair}"/><path d="M15.5 38 C12.5 22 20 12.5 32 12.5 C44 12.5 51.5 22 48.5 38 C47 32 45 28.5 41.5 26 L40 31 L36 25 L32 31 L28 25.5 L24 30.5 L22 26 C18.5 28.5 16.8 33 15.5 38Z" fill="${hair}"/><path d="M26 17 C29 15 35 15 38 17" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="1.6" stroke-linecap="round"/>`; break;
+    case 'cat':
+      back = `<path d="M15 21 L16 4 L29 13Z" fill="${hair}"/><path d="M49 21 L48 4 L35 13Z" fill="${hair}"/><path d="M18.2 17 L18.6 8.5 L24.5 13.5Z" fill="#ff9db5"/><path d="M45.8 17 L45.4 8.5 L39.5 13.5Z" fill="#ff9db5"/><path d="M14 40 C12 14 52 14 50 40 L50 46 L14 46Z" fill="${hair}"/>`; break;
+    case 'witch':
+      back = `<path d="M13 40 C10 10 54 10 51 40 L53 64 L11 64Z" fill="${hair}"/>`;
+      acc = `<ellipse cx="32" cy="17.5" rx="21" ry="5.2" fill="${c.acc || '#5b3cc4'}"/><path d="M20 17 C22 8 28 0 36 -6 C35 2 40 9 44 17Z" fill="${c.acc || '#5b3cc4'}"/><path d="M20.2 15.4 Q32 19.6 43.8 15.4 L44 17.6 Q32 21.6 20 17.6Z" fill="#f5b301"/><path d="M32 4.2 l1.3 2.7 3 .4 -2.2 2.1 .5 3 -2.6 -1.4 -2.6 1.4 .5 -3 -2.2 -2.1 3 -.4z" fill="#ffe27a"/>`; break;
+  }
+  if (c.band) acc += `<path d="M15.8 26.5 Q32 20.4 48.2 26.5 L48 30.6 Q32 24.8 16 30.6Z" fill="${c.band}"/><rect x="29.2" y="23.4" width="5.6" height="5" rx="1.2" fill="#e5e7eb" opacity=".9"/><path d="M48 28 L56 24 L53 31Z M48 29 L57 31 L52 35Z" fill="${c.band}"/>`;
+  if (c.goggles) acc += `<path d="M15.5 21 Q32 14.5 48.5 21" fill="none" stroke="#374151" stroke-width="3"/><circle cx="25" cy="18.5" r="5" fill="#7dd3fc" stroke="#374151" stroke-width="2"/><circle cx="39" cy="18.5" r="5" fill="#7dd3fc" stroke="#374151" stroke-width="2"/><circle cx="23.5" cy="17" r="1.4" fill="#fff" opacity=".85"/><circle cx="37.5" cy="17" r="1.4" fill="#fff" opacity=".85"/>`;
+  if (c.glasses) acc += `<circle cx="25" cy="37" r="6.6" fill="rgba(255,255,255,.18)" stroke="#2f2a3a" stroke-width="1.6"/><circle cx="39" cy="37" r="6.6" fill="rgba(255,255,255,.18)" stroke="#2f2a3a" stroke-width="1.6"/><path d="M31.6 36.6 H32.4" stroke="#2f2a3a" stroke-width="1.6"/>`;
+  if (c.scarf) acc += `<path d="M20 49 C26 54 38 54 44 49 L46 55 C38 60 26 60 18 55Z" fill="${c.scarf}"/><path d="M40 55 L45 66 L38 66 L36 57Z" fill="${c.scarf}"/>`;
+  return `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${back}${body}${face}${cheeks}${eyes}${brows}${mouth}${front}${acc}</svg>`;
+}
+const ANIME = [
+  { n: 'Kenji', bg: ['#38bdf8', '#6366f1'], c: { style: 'spiky', hair: '#1f2937', eye: '#8b5a2b', out: '#3b82f6', band: '#e11d48', grin: 1 } },
+  { n: 'Sakura', bg: ['#f9a8d4', '#fb7185'], c: { style: 'twin', hair: '#ff8fb8', eye: '#d6336c', out: '#fff1f5', acc: '#ef4444' } },
+  { n: 'Ryu', bg: ['#2dd4bf', '#0f766e'], c: { style: 'spiky', hair: '#2563eb', eye: '#14b8a6', out: '#1f2937', scarf: '#ef4444' } },
+  { n: 'Mika', bg: ['#c4b5fd', '#ec4899'], c: { style: 'cat', hair: '#7c3aed', eye: '#f5b301', out: '#f472b6', grin: 1 } },
+  { n: 'Aoi', bg: ['#a5f3fc', '#3b82f6'], c: { style: 'long', hair: '#0d9488', eye: '#0ea5e9', out: '#e0f2fe', acc: '#fde047' } },
+  { n: 'Hana', bg: ['#fde68a', '#fb923c'], c: { style: 'pony', hair: '#f5c542', eye: '#16a34a', out: '#fb923c', acc: '#e11d48', grin: 1 } },
+  { n: 'Taro', bg: ['#86efac', '#16a34a'], c: { style: 'messy', hair: '#6b4423', eye: '#3b2f2f', out: '#22c55e', glasses: 1 } },
+  { n: 'Yuki', bg: ['#e0f2fe', '#818cf8'], c: { style: 'messy', hair: '#e5e7eb', shade: 'rgba(80,90,130,.16)', eye: '#60a5fa', out: '#111827', scarf: '#93c5fd' } },
+  { n: 'Rei', bg: ['#fdba74', '#ef4444'], c: { style: 'spiky', hair: '#dc2626', eye: '#f97316', out: '#1d4ed8', goggles: 1, grin: 1 } },
+  { n: 'Luna', bg: ['#4c1d95', '#1e1b4b'], c: { style: 'witch', hair: '#3b1f6e', eye: '#a78bfa', out: '#7c3aed', acc: '#5b3cc4' } }
+];
+
+const ANIME_START = AVATARS.length;
+ANIME.forEach((x) => AVATARS.push([null, x.bg[0], x.bg[1], animeSVG(x.c)]));
 function avatarHTML(cls) {
   const id = (store.get('avatars', {}) || {})[who() || '_'], nm = who(), x = AVATARS[id];
-  return x ? `<span class="av emo ${cls || ''}" style="background:linear-gradient(135deg,${x[1]},${x[2]})">${x[0]}</span>` : `<span class="av ${cls || ''}">${esc((nm || '?')[0].toUpperCase())}</span>`;
+  return x && x[3] ? `<span class="av anime ${cls || ''}" style="background:linear-gradient(135deg,${x[1]},${x[2]})">${x[3]}</span>` : x ? `<span class="av emo ${cls || ''}" style="background:linear-gradient(135deg,${x[1]},${x[2]})">${x[0]}</span>` : `<span class="av ${cls || ''}">${esc((nm || '?')[0].toUpperCase())}</span>`;
 }
 function avatarPicker() {
   const cur = (store.get('avatars', {}) || {})[who() || '_'];
-  return `<div class="avgrid"><button class="avopt ${cur === undefined ? 'on' : ''}" data-act="avatar" data-v="-1" aria-label="Initial"><span class="av">${esc((who() || '?')[0].toUpperCase())}</span></button>${AVATARS.map((x, i) => `<button class="avopt ${cur === i ? 'on' : ''}" data-act="avatar" data-v="${i}" aria-label="Picture ${i + 1}"><span class="av emo" style="background:linear-gradient(135deg,${x[1]},${x[2]})">${x[0]}</span></button>`).join('')}</div>`;
+  const opt = (x, i) => `<button class="avopt ${cur === i ? 'on' : ''}" data-act="avatar" data-v="${i}" aria-label="Picture ${i + 1}"><span class="av ${x[3] ? 'anime' : 'emo'}" style="background:linear-gradient(135deg,${x[1]},${x[2]})">${x[3] || x[0]}</span></button>`;
+  const ini = `<button class="avopt ${cur === undefined ? 'on' : ''}" data-act="avatar" data-v="-1" aria-label="Initial"><span class="av">${esc((who() || '?')[0].toUpperCase())}</span></button>`;
+  return `<div class="avlab">Anime</div><div class="avgrid">${AVATARS.map((x, i) => (i >= ANIME_START ? opt(x, i) : '')).join('')}</div>
+    <div class="avlab">Classic</div><div class="avgrid">${ini}${AVATARS.map((x, i) => (i < ANIME_START ? opt(x, i) : '')).join('')}</div>`;
 }
 function moneyUser() { try { return JSON.parse(localStorage.getItem('artime.money.user')) || null; } catch (e) { return null; } }
 function roleLine() { const u = moneyUser(); return u ? (u.admin ? 'Admin · Logged in to Payments' : 'Staff · Logged in to Payments') : 'Not logged in to Payments'; }
@@ -708,7 +772,7 @@ function vHome() {
   if (!S.url) return `<div class="banner bad">No Google Sheets link yet. <button data-act="go-more">Add it in More</button></div>`;
   if (!its.length) {
     return S.loading || S.syncing
-      ? `<div class="card empty"><b>Loading your stock...</b>One moment.</div>`
+      ? `<div class="card empty"><span class="spin"></span><b>Loading your stock...</b>One moment.</div>`
       : `<div class="card empty"><b>No stock data yet</b>${esc(S.error || 'Tap the sync line above to load from Google Sheets.')}</div>`;
   }
   const total = its.length;
@@ -770,13 +834,20 @@ function expMoves() {            // per-item movements: each Dial Out becomes on
   });
   return out;
 }
+const editMs = 30 * 60 * 1000;
+function moveLeft(e) {                            // minutes left to change this entry (0 = not allowed)
+  const me = String(who() || '').trim().toLowerCase(), by = String(e.by || '').trim().toLowerCase();
+  if (!e.id || !e.at || e.pending || e.via || !me || me === '-' || by !== me || Date.now() - e.at >= editMs) return 0;
+  return Math.max(1, Math.ceil((e.at + editMs - Date.now()) / 60000));
+}
 function actRow(e, nm) {
   const inn = e.type === 'in';
   const dl = !inn && (isDial(e.code) || !!e.via);
   const left = dl ? skippedOf(e.note).map((c) => String(nm[c] || c).split(' - ')[0]) : [];
+  const by = String(e.by || '').trim(), left2 = moveLeft(e);
   return `<div class="act"><span class="aic ${inn ? 'in' : 'out'}">${ic(inn ? 'up' : 'down', 22, 2.2)}</span>
-    <div class="am"><b>${dl ? 'Dial Out' : 'Stock ' + (inn ? 'In' : 'Out')}</b><span>${esc(nm[e.code] || e.code)}${left.length ? ' - without ' + esc(left.join(', ')) : ''}</span></div>
-    <div class="ar"><b class="${inn ? 'g' : 'r'}">${inn ? '+' : '-'}${num(e.qty)}</b><span class="${e.pending ? 'pend' : ''}">${e.pending ? 'Waiting to sync' : esc(when(e))}</span></div></div>`;
+    <div class="am"><b>${dl ? 'Dial Out' : 'Stock ' + (inn ? 'In' : 'Out')}</b><span>${esc(nm[e.code] || e.code)}${left.length ? ' - without ' + esc(left.join(', ')) : ''}</span>${by && by !== 'Old app' && by !== '-' ? `<span class="who">by ${esc(by)}</span>` : ''}</div>
+    <div class="ar"><b class="${inn ? 'g' : 'r'}">${inn ? '+' : '-'}${num(e.qty)}</b><span class="${e.pending ? 'pend' : ''}">${e.pending ? 'Waiting to sync' : esc(when(e))}</span></div>${left2 ? `<button class="ebtn" data-act="editmv" data-id="${esc(e.id)}" data-t="${e.type}" aria-label="Change this entry">${ic('pencil', 16)}<small>${left2} min</small></button>` : ''}</div>`;
 }
 
 /* ---------- chart ---------- */
@@ -913,8 +984,9 @@ function vReports() {
   const bars = (arr, cls, sign) => arr.length ? arr.map(([code, q]) => `<div class="row plain"><div style="display:flex;justify-content:space-between;gap:10px"><b style="font-weight:600">${esc(nm[code] || code)}</b><b class="${cls}">${sign}${num(q)}</b></div><div class="bar ${cls === 'g' ? 'gb' : ''}"><i style="width:${Math.max(4, Math.round((q / arr[0][1]) * 100))}%"></i></div></div>`).join('') : `<div class="empty"><b>Nothing here</b>No entries in this period.</div>`;
   const opts = items().slice().sort((x, y) => x.title.localeCompare(y.title)).map((i) => `<option value="${esc(i.code)}"${item === i.code ? ' selected' : ''}>${esc(i.title)}</option>`).join('');
   const net = st.ti - st.to;
-  return `<div class="chips" style="margin-top:0">${chip(1, 'Today')}${chip(7, 'Last 7 Days')}${chip(14, 'Last 14 Days')}${chip(30, 'Last 30 Days')}${chip(90, 'Last 90 Days')}</div>
-    <label class="catsel wide"><span>${ic('cube', 18)}</span><select data-bind="repItem" aria-label="Item"><option value="">All items</option>${opts}</select></label>
+  const ro = (v, l) => `<option value="${v}"${S.repRange === v ? ' selected' : ''}>${l}</option>`;
+  return `<div class="fbar"><label class="catsel"><select data-bind="repRange" aria-label="Period">${ro(1, 'Today')}${ro(7, 'Last 7 Days')}${ro(14, 'Last 14 Days')}${ro(30, 'Last 30 Days')}${ro(90, 'Last 90 Days')}</select></label>
+    <label class="catsel"><select data-bind="repItem" aria-label="Item"><option value="">All items</option>${opts}</select></label></div>
     <section class="rsum"><div class="g"><small>Stock In</small><b>+${num(st.ti)}</b></div><div class="r"><small>Stock Out</small><b>-${num(st.to)}</b></div>${item ? `<div class="${net < 0 ? 'r' : 'b'}"><small>Net</small><b>${net > 0 ? '+' : ''}${num(net)}</b></div>` : `<div class="b"><small>Dials made</small><b>${num(st.dials)}</b></div>`}</section>
     <div class="repact"><button class="btn ghost" data-act="repshare">${ic('send', 18)}Share summary</button><button class="btn ghost" data-act="repcsv">${ic('download', 18)}Download Excel (CSV)</button></div>
     <div class="card sec">${chartBlock(c)}</div>
@@ -1201,7 +1273,7 @@ function renderSheet() {
     const si = syncInfo(), nm = who();
     el.innerHTML = `<div class="scrim side" data-act="close"><aside class="drawer" role="dialog" aria-label="Menu">
       <div class="dh">${avatarHTML()}<div class="dn">${nm ? `<b>${esc(nm)}</b>` : '<a href="#/more"><b>Add your name</b></a>'}<small>${roleLine()}</small></div></div>
-      <div class="dsync ${si.cls}"><span class="pip"></span><span class="t">${esc(si.txt)}</span><button data-act="sync">Sync now</button></div>
+      <div class="dsync ${si.cls}">${si.cls === 'busy' ? '<i class="clk"></i>' : '<span class="pip"></span>'}<span class="t">${esc(si.txt)}</span><button data-act="sync">Sync now</button></div>
       <div class="dsec">Today at a glance</div>
       <div class="dtoday"><div class="g"><b>+${num(tin)}</b><small>In today</small></div><div class="r"><b>-${num(tout)}</b><small>Out today</small></div><div class="${al ? 'a' : ''}"><b>${al}</b><small>To reorder</small></div></div>
       <div class="dsec">Tools</div>
@@ -1267,6 +1339,7 @@ document.addEventListener('click', (ev) => {
       if (pn && !pn.readOnly) { const n = pn.value.trim(); store.set('by', n); if (n && old !== n && m[old] !== undefined) { m[n] = m[old]; store.set('avatars', m); } }
       toast('Profile saved'); location.hash = '#/more'; break;
     }
+    case 'editmv': openEditMove(el.dataset.id, el.dataset.t); break;
     case 'upcheck': checkUpdate(); break;
     case 'upforce': hardRefresh(); break;
     case 'payadd': S.sheet = { type: 'payadd' }; renderSheet(); break;
@@ -1326,6 +1399,7 @@ document.addEventListener('change', (ev) => {
   else if (k === 'homeRange') { S.homeRange = Number(el.value); render(); }
   else if (k === 'cat') { S.filter.cat = el.value; render(); }
   else if (k === 'repItem') { S.repItem = el.value; render(); }
+  else if (k === 'repRange') { S.repRange = Number(el.value); render(); }
 });
 document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && S.sheet) { S.sheet = null; renderSheet(); } });
 window.addEventListener('hashchange', onRoute);
@@ -1465,6 +1539,40 @@ function openReorder(code, fresh, note) {
     <button class="go" data-rx="send" data-code="${esc(code)}">Send on WhatsApp</button><button class="rcancel" data-rx="close">Cancel</button></div></div>`;
   document.getElementById('rqty').addEventListener('input', (e) => { document.getElementById('rtxt').value = rsMsg(it, row, e.target.value); });
 }
+function openEditMove(id, type) {
+  const e = S.history.find((x) => x.id === id && x.type === type); if (!e) return;
+  const left = moveLeft(e); if (!left) { toast('The 30 minutes to change this entry are over', true); return; }
+  const dl = isDial(e.code), nm = {}; items().forEach((i) => { nm[i.code] = i.title; });
+  let el = document.getElementById('rs'); if (!el) { el = document.createElement('div'); el.id = 'rs'; document.body.appendChild(el); }
+  el.innerHTML = `<div class="rsb" data-rx="close"><div class="rsc" onclick="event.stopPropagation()"><div class="grab"></div><h3>Change this entry</h3>
+    <small>${esc(nm[e.code] || e.code)} · ${dl ? 'Dial Out' : e.type === 'in' ? 'Stock In' : 'Stock Out'} · by ${esc(e.by)} · you can change it for ${left} more min</small>
+    <label>${dl ? 'How many dials' : 'Quantity'}</label><input id="ed-qty" type="number" inputmode="decimal" value="${esc(e.qty)}">
+    ${dl ? '' : `<label>${e.type === 'in' ? 'Supplier' : 'Used for'}</label><input id="ed-party" value="${esc(e.party || '')}">
+    <label>Reference No.</label><input id="ed-ref" value="${esc(e.ref || '')}">
+    <label>Notes</label><input id="ed-note" value="${esc(e.note || '')}">`}
+    <label>Date</label><input id="ed-date" type="date" value="${esc(e.date)}">
+    <div class="hint bad" id="ed-msg"></div>
+    <button class="go" data-rx="msave" data-id="${esc(id)}" data-t="${e.type}">Save changes</button>
+    <button class="rcancel dng" data-rx="mdel" data-id="${esc(id)}" data-t="${e.type}">Delete entry</button>
+    <button class="rcancel" data-rx="close">Cancel</button></div></div>`;
+}
+async function stockEdit(id, type, del) {
+  const e = S.history.find((x) => x.id === id && x.type === type); if (!e) return;
+  const msg = (t, clock) => { const m = document.getElementById('ed-msg'); if (m) m.innerHTML = (clock ? '<i class="clk"></i>' : '') + esc(t); };
+  const v = (k) => String((document.getElementById('ed-' + k) || {}).value || '').trim(), dl = isDial(e.code);
+  const q = Number(v('qty'));
+  if (!del && !(q > 0)) { msg('Enter a quantity above 0.'); return; }
+  const ed = del ? { id, type, by: store.get('by', ''), void: true } : { id, type, by: store.get('by', ''), qty: q, date: v('date') || e.date, party: dl ? e.party || '' : v('party'), ref: dl ? e.ref || '' : v('ref'), note: dl ? e.note || '' : v('note') };
+  msg('Saving…', true);
+  try {
+    const j = await apiPost({ v: 2, entries: [], edits: [ed] });
+    if (!j || !j.ok) { msg((j && j.error) || 'Could not save the change.'); return; }
+    applyData(j);
+    const r = (j.editResults || [])[0] || {};
+    if (r.status === 'ok') { const x = document.getElementById('rs'); if (x) x.remove(); toast(del ? 'Entry deleted' : 'Entry updated'); render(); }
+    else msg(r.msg || 'Could not save the change.');
+  } catch (err) { msg(navigator.onLine ? 'Could not reach Google Sheets.' : 'No internet. Try again when you are online.'); }
+}
 function openBulk(gi) {
   const g = BULK[gi]; if (!g) return;
   const rows = g.rows.map(({ i, r }) => ({ i, r, qty: Math.max(1, Math.round((r && r.qty) || (Number(i.min) * 2 - Number(i.eff)) || 1)), on: true }));
@@ -1494,6 +1602,11 @@ function openBulk(gi) {
 document.addEventListener('click', (ev) => {
   try {
     const r = ev.target.closest('[data-r]'), x = ev.target.closest('[data-rx]');
+    if (x && (x.dataset.rx === 'msave' || x.dataset.rx === 'mdel')) {
+      ev.stopPropagation();
+      if (x.dataset.rx === 'mdel' && !confirm(window.ARTIME_tr('Delete this entry?'))) return;
+      stockEdit(x.dataset.id, x.dataset.t, x.dataset.rx === 'mdel'); return;
+    }
     if (x && x.dataset.rx === 'bulk') { ev.stopPropagation(); ev.preventDefault(); openBulk(Number(x.dataset.g)); return; }
     if (x && x.dataset.rx === 'bsend') {
       ev.stopPropagation();
