@@ -687,3 +687,24 @@ html[data-theme="dark"] .tcard.in { border-color: #1f5a49; } html[data-theme="da
 .sch.on i { background: #fff; } .sch.on.low i { background: #3d2a00; }
 /* charts */
 .chart svg { width: 100%; height: auto; display: block; } .chart text { fill: var(--mute); font-size: 10.5px; }
+
+/* ================= round 7: clock loader, edit buttons, filter bar, anime avatars ================= */
+.clk { display: inline-block; width: 1.05em; height: 1.05em; border: 2px solid currentColor; border-radius: 50%; position: relative; vertical-align: -.17em; margin-right: 7px; flex: none; }
+.clk::before, .clk::after { content: ''; position: absolute; left: 50%; bottom: 50%; width: 2px; margin-left: -1px; background: currentColor; border-radius: 2px; transform-origin: 50% 100%; }
+.clk::before { height: 40%; animation: clkr 1.1s linear infinite; } .clk::after { height: 28%; animation: clkr 13.2s linear infinite; }
+@keyframes clkr { to { transform: rotate(360deg); } }
+.spin { width: 38px; height: 38px; border: 3px solid var(--blue); border-radius: 50%; position: relative; animation: none; display: inline-block; margin-bottom: 8px; }
+.spin::before, .spin::after { content: ''; position: absolute; left: 50%; bottom: 50%; width: 3px; margin-left: -1.5px; background: var(--blue); border-radius: 3px; transform-origin: 50% 100%; }
+.spin::before { height: 40%; animation: clkr 1.1s linear infinite; } .spin::after { height: 27%; animation: clkr 13.2s linear infinite; }
+.syncline.busy .clk, .dsync.busy .clk { margin-right: 8px; }
+.ebtn { flex: none; display: inline-flex; flex-direction: column; align-items: center; gap: 1px; padding: 7px 9px; border-radius: 12px; background: var(--blue-t); color: var(--blue); font-weight: 700; margin-left: 6px; }
+.ebtn small { font-size: 10.5px; font-weight: 700; line-height: 1; } .ebtn:active { transform: scale(.94); }
+.act .am .who, .pmm small { overflow-wrap: anywhere; } .act .am .who { display: block; color: var(--mute); font-size: 12.5px; }
+.rsc select { width: 100%; padding: 12px; border: 1px solid var(--line2); border-radius: 12px; font: inherit; background: var(--card); color: var(--ink); }
+.rsc .rcancel.dng { color: var(--red); font-weight: 650; } #pe { position: fixed; inset: 0; z-index: 70; }
+.fbar { display: flex; gap: 8px; } .fbar .catsel { flex: 1; min-width: 0; padding: 0 8px 0 12px; } .fbar .catsel select { max-width: none; width: 100%; font-size: 13.5px; text-overflow: ellipsis; }
+.note.warn { background: var(--yellow-t); color: var(--yellow-d); } .size svg { margin-right: 6px; vertical-align: -3px; }
+.pmtile.dis { opacity: .5; }
+.av.anime { overflow: hidden; padding: 0; } .av.anime svg { width: 100%; height: 100%; display: block; }
+.avlab { font-size: 12.5px; font-weight: 800; color: var(--mute); text-transform: uppercase; letter-spacing: .06em; margin: 12px 0 8px; }
+.avopt .av.anime { background-clip: padding-box; }
