@@ -9,7 +9,7 @@
   const ag = (k, d) => { try { const v = localStorage.getItem('artime.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } };   // settings made in the app
   const rs = (n) => '₹' + Number(n || 0).toLocaleString(ag('numfmt', 'in') === 'intl' ? 'en-US' : 'en-IN', { maximumFractionDigits: 2 });
   const M = { user: (() => { const u = g('user', null); return u && u.name ? u : null; })(), q: g('q', []), failed: g('failed', []), hist: g('hist', []), msg: '', type: g('type', 'in') === 'out' ? 'out' : 'in', mode: g('mode', 'cash') === 'bank' ? 'bank' : 'cash', bank: g('bank', ''),
-    view: 'entry', range: '7', rtype: 'all', racct: 'all', rq: '', pin: g('pin', null), pinBuf: '', pinMode: 'login', rep: g('rep', null), repBusy: false, repErr: '' };
+    view: 'entry', range: '7', rtype: 'all', racct: 'all', rwho: 'all', rq: '', pin: g('pin', null), pinBuf: '', pinMode: 'login', rep: g('rep', null), repBusy: false, repErr: '' };
   const dev = g('dev', null) || (() => { const d = 'd' + Math.random().toString(36).slice(2, 10); s('dev', d); return d; })();
   const url = () => g('url', '') || (window.APP_CONFIG && APP_CONFIG.moneyUrl) || '';
   const keep = () => { s('q', M.q); s('failed', M.failed); s('hist', M.hist); s('user', M.user); s('pin', M.pin); };
@@ -19,6 +19,10 @@
   const toast = (m, bad) => { try { if (window.ARTIME_toast) window.ARTIME_toast(m, bad); } catch (e) { /* ignore */ } };
   const banks = () => String((M.user && M.user.bank) || '').split(/[,;/|]/).map((x) => x.trim()).filter((x) => x && x.toLowerCase() !== 'cash');
 
+  const CLK = '<i class="clk"></i>';
+  const idTime = (id) => { const n = parseInt(String(id || '').slice(1, 9), 36); return n > 1e12 ? n : 0; };        // phone-made ids carry their creation time
+  const editLeft = (at, by) => (by && M.user && by === M.user.name && at && Date.now() - at < 30 * 60000 ? Math.max(1, Math.ceil((at + 30 * 60000 - Date.now()) / 60000)) : 0);
+  const ebtn = (id, left) => `<button class="ebtn" data-m="pedit" data-id="${esc(id)}" aria-label="Change this entry">${ic('pencil', 16)}<small>${left} min</small></button>`;
   async function post(body, u) {                       // never hangs, never throws; says why it failed
     const c = new AbortController(), t = setTimeout(() => c.abort(), window.__MONEY_TMO || 15000);
     try {
@@ -38,6 +42,7 @@
     syncing = true; ui();
     try {
       const j = await post({ action: 'save', user: M.user.name, dev, entries: mine });
+    if (j && typeof j.bank === 'string' && M.user && j.bank !== M.user.bank) { M.user.bank = j.bank; keep(); }
       if (j.busy) later(1500 + Math.random() * 2500);          // lock busy: not an error, just retry
       else if (j.ok && j.results) {
         const r = {}; j.results.forEach((x) => { r[x.id] = x; });
@@ -58,16 +63,56 @@
     try {
       const me = M.user && M.user.name;
       const mine = M.q.filter((e) => e.u === me);
-      const row = (e, tag) => `<div class="pmrow"><span class="pmi ${e.type}">${e.type === 'in' ? '+' : '−'}</span>
-        <div class="pmm"><b>${rs(e.amount)}</b><small>${esc(e.bank || 'Cash')}${e.party ? ' · ' + esc(e.party) : e.note ? ' · ' + esc(e.note) : ''}</small></div>${tag}</div>`;
+      const row = (e, tag, ed) => `<div class="pmrow"><span class="pmi ${e.type}">${e.type === 'in' ? '+' : '−'}</span>
+        <div class="pmm"><b>${rs(e.amount)}</b><small>${esc(e.bank || 'Cash')}${e.party ? ' · ' + esc(e.party) : e.note ? ' · ' + esc(e.note) : ''} · by ${esc(e.u || me)}</small></div>${tag}${ed || ''}</div>`;
       el.innerHTML = `<div class="card group"><h2>${mine.length ? mine.length + ' waiting to sync' : 'All synced ✓'}</h2>
         ${mine.map((e) => row(e, '<span class="pmtag w">waiting</span>')).join('')}
-        ${M.hist.slice(0, 8).map((e) => row(e, `<span class="pmtag">${e.held ? 'held' : 'saved'}</span>`)).join('')}
-        <div class="btns"><button class="btn ghost" data-m="syncnow">${syncing ? 'Syncing…' : 'Sync now'}</button></div></div>
+        ${M.hist.slice(0, 8).map((e) => { const l = e.held ? 0 : editLeft((M.rep && (M.rep.rows.find((x) => x[7] === e.id) || [])[8]) || idTime(e.id), e.u); return row(e, `<span class="pmtag">${e.held ? 'held' : 'saved'}</span>`, l ? ebtn(e.id, l) : ''); }).join('')}
+        <div class="btns"><button class="btn ghost" data-m="syncnow">${syncing ? CLK + 'Syncing…' : 'Sync now'}</button></div></div>
         ${M.failed.length ? `<div class="card group"><h2 class="r">${M.failed.length} could not be saved</h2>${M.failed.map((e) => `<div class="pmrow"><div class="pmm"><b>${rs(e.amount)}</b><small class="r">${esc(e.why)}</small></div><span><button class="btn ghost" data-m="retry" data-id="${esc(e.id)}">Retry</button> <button class="btn danger" data-m="del" data-id="${esc(e.id)}">Delete</button></span></div>`).join('')}</div>` : ''}`;
     } catch (e) { /* a display problem must never stop saving */ }
   }
 
+  function findPay(id) {
+    const r = M.rep && M.rep.rows.find((x) => x[7] === id);
+    if (r) return { id, amount: r[2], party: r[3], bank: r[4], note: r[5], date: r[0], type: r[1], at: r[8], by: r[6] };
+    const h = M.hist.find((e) => e.id === id);
+    return h ? { id, amount: h.amount, party: h.party || '', bank: h.bank || 'Cash', note: h.note || '', date: h.date, type: h.type, at: idTime(id), by: h.u } : null;
+  }
+  function openPayEdit(id) {
+    const e = findPay(id); if (!e) return;
+    const left = editLeft(e.at, e.by); if (!left) { toast('The 30 minutes to change this entry are over', true); return; }
+    const old = $('#pe'); if (old) old.remove();
+    const el = document.createElement('div'); el.id = 'pe'; document.body.appendChild(el);
+    const accts = ['Cash'].concat(banks()); if (!accts.includes(e.bank)) accts.push(e.bank);
+    el.innerHTML = `<div class="rsb"><div class="rsc"><div class="grab"></div><h3>Change this entry</h3>
+      <small>${e.type === 'in' ? 'Payment In' : 'Payment Out'} · by ${esc(e.by)} · you can change it for ${left} more min</small>
+      <label>Amount</label><input id="pe-amt" inputmode="decimal" value="${esc(e.amount)}">
+      <label>Cash or bank</label><select id="pe-bank">${accts.map((a) => `<option value="${esc(a)}"${a === e.bank ? ' selected' : ''}>${esc(a)}</option>`).join('')}</select>
+      <label>Party / name</label><input id="pe-party" value="${esc(e.party)}">
+      <label>Note</label><input id="pe-note" value="${esc(e.note)}">
+      <label>Date</label><input id="pe-date" type="date" value="${esc(e.date)}">
+      <div class="hint bad" id="pe-msg"></div>
+      <button class="go" data-m="pesave" data-id="${esc(id)}">Save changes</button>
+      <button class="rcancel dng" data-m="pedel" data-id="${esc(id)}">Delete entry</button>
+      <button class="rcancel" data-m="peclose">Cancel</button></div></div>`;
+    el.firstChild.addEventListener('click', (ev) => { if (ev.target === el.firstChild) el.remove(); });
+  }
+  async function payEditSend(id, del) {
+    const msg = (t) => { const x = $('#pe-msg'); if (x) x.innerHTML = t; };
+    if (!M.pin) { msg('Open the Report tab and enter your PIN once, then try again.'); return; }
+    const v = (k) => String(($('#pe-' + k) || {}).value || '').trim();
+    const body = del ? { action: 'edit', pin: M.pin, dev, id, void: true } : { action: 'edit', pin: M.pin, dev, id, amount: parseFloat(v('amt').replace(/,/g, '')), bank: v('bank'), party: v('party'), note: v('note'), date: v('date') };
+    if (!del && !(body.amount > 0)) { msg('Enter an amount'); return; }
+    msg(CLK + 'Saving…');
+    const j = await post(body);
+    if (j.ok) {
+      const h = M.hist.find((e) => e.id === id);
+      if (h) { if (del) M.hist = M.hist.filter((e) => e.id !== id); else Object.assign(h, { amount: body.amount, bank: body.bank, party: body.party, note: body.note, date: body.date || h.date }); keep(); }
+      const x = $('#pe'); if (x) x.remove();
+      toast(del ? 'Entry deleted' : 'Entry updated'); ui(); loadReport(true);
+    } else msg(esc(j.net ? 'No internet. Try again when you are online.' : (j.error || 'Could not save the change.')));
+  }
   const say = (m) => { M.msg = m; const el = $('#m-msg'); if (el) el.textContent = m; };
 
   const parties = () => {                              // people you used recently: one tap to fill the name
@@ -92,7 +137,8 @@
       if (!url()) { el.innerHTML = '<div class="card group"><h2>No payments sheet link yet</h2><p>Add the Payments Google Sheet link in Settings.</p><div class="btns"><a class="btn" href="#/more">Open Settings</a></div></div>'; return; }
       if (!M.user) { el.innerHTML = `<div class="form pay in">${pinPad('login', 'Log in to Payments', 'Enter your PIN. Only the first time on this phone.', M.msg)}</div>`; return; }
       const bl = banks(), ps = parties();
-      if (!M.bank && bl[0]) M.bank = bl[0];
+      if (!bl.includes(M.bank)) M.bank = bl[0] || '';
+      if (M.mode === 'bank' && !bl.length) M.mode = 'cash';
       const m = (v) => (M.mode === v ? 'on' : '');
       el.innerHTML = `<div class="form pay ${M.type}" id="m-form">
         <div class="pmwho"><span>Logged in as <b>${esc(M.user.name)}</b></span><button data-m="logout">Log out</button></div>
@@ -101,11 +147,10 @@
             <div class="big"><b>₹</b><input id="m-amt" inputmode="decimal" placeholder="0" autocomplete="off"></div>
             <div class="qchips"><button data-m="add" data-v="100">+100</button><button data-m="add" data-v="500">+500</button><button data-m="add" data-v="1000">+1,000</button><button data-m="add" data-v="5000">+5,000</button><button class="clr" data-m="add" data-v="0">Clear</button></div></div>
           <div class="fl">Cash or bank<i>*</i></div>
-          <div class="pmmode"><button class="pmtile ${m('cash')}" data-m="mode" data-v="cash">${ic('cash', 26)}<b>Cash</b></button><button class="pmtile ${m('bank')}" data-m="mode" data-v="bank">${ic('bank', 26)}<b>Bank</b></button></div>
+          <div class="pmmode"><button class="pmtile ${m('cash')}" data-m="mode" data-v="cash">${ic('cash', 26)}<b>Cash</b></button><button class="pmtile ${m('bank')}${bl.length ? '' : ' dis'}" data-m="mode" data-v="bank">${ic('bank', 26)}<b>Bank</b></button></div>
           <div id="m-bankbox" style="display:${M.mode === 'bank' ? 'block' : 'none'}">
-            <label class="fl" for="m-bank">Which bank<i>*</i></label>
-            ${bl.length ? `<div class="sizes">${bl.map((b) => `<button class="size ${b === M.bank ? 'on' : ''}" data-m="bank" data-v="${esc(b)}">${esc(b)}</button>`).join('')}</div>` : ''}
-            <div class="field"${bl.length ? ' style="margin-top:8px"' : ''}>${ic('bank', 20)}<input id="m-bank" placeholder="Bank name" value="${esc(M.bank)}" autocomplete="off"></div>
+            <div class="fl">Your bank accounts <small>(set in the sheet)</small></div>
+            ${bl.length ? `<div class="sizes">${bl.map((b) => `<button class="size ${b === M.bank ? 'on' : ''}" data-m="bank" data-v="${esc(b)}">${ic('bank', 16)}${esc(b)}</button>`).join('')}</div>` : `<div class="note warn">${ic('lock', 18)}<span>No bank account is set for you in the sheet. Ask the admin to add it in the Users tab (Bank column).</span></div>`}
           </div>
           <label class="fl" for="m-party">Party / name</label>
           <div class="field">${ic('truck', 20)}<input id="m-party" placeholder="Who paid or who was paid" autocomplete="off"></div>
@@ -145,7 +190,7 @@
     M.repTry = Date.now(); M.repBusy = true; M.repErr = ''; drawReport(); drawDash();
     const j = await post({ action: 'report', pin: M.pin, dev });
     M.repBusy = false;
-    if (j.ok && Array.isArray(j.rows)) { M.rep = j; M.repAt = Date.now(); s('rep', j); }
+    if (j.ok && Array.isArray(j.rows)) { M.rep = j; M.repAt = Date.now(); s('rep', j); if (typeof j.bank === 'string' && M.user && j.bank !== M.user.bank) { M.user.bank = j.bank; keep(); } }
     else if (j.net) M.repErr = 'No connection. Showing the last saved report.';
     else if (j.error === 'Unknown action') M.repErr = 'The Payments script is an old version. Paste the new MoneyScript.gs, then Deploy > Manage deployments > New version.';
     else { M.repErr = j.error || 'Could not load the report.'; if (/PIN/i.test(M.repErr)) { M.pin = null; keep(); } }
@@ -172,12 +217,12 @@
       });
       const net = tin - tout;
       const names = Object.keys(bal).sort((x, y) => (x === 'Cash' ? -1 : y === 'Cash' ? 1 : x.localeCompare(y)));
-      const row = (e, tag) => `<div class="pmrow" style="padding:10px 16px"><span class="pmi ${e.type}">${e.type === 'in' ? '+' : '−'}</span><div class="pmm"><b class="${e.type === 'in' ? 'g' : 'r'}">${rs(e.amount)}</b><small>${esc(e.bank || 'Cash')}${e.party ? ' · ' + esc(e.party) : ''}</small></div>${tag}</div>`;
-      const recent = pend.slice().reverse().map((e) => row(e, '<span class="pmtag w">waiting</span>')).concat(R ? R.rows.slice(0, 6).map((r) => row({ type: r[1], amount: r[2], bank: r[4], party: r[3] }, `<span class="pmtag">${esc(r[0] === td ? 'Today' : dShort(r[0]))}</span>`)) : []).slice(0, 6);
+      const row = (e, tag) => { const l = e.id ? editLeft(e.at, e.by) : 0; return `<div class="pmrow" style="padding:10px 16px"><span class="pmi ${e.type}">${e.type === 'in' ? '+' : '−'}</span><div class="pmm"><b class="${e.type === 'in' ? 'g' : 'r'}">${rs(e.amount)}</b><small>${esc(e.bank || 'Cash')}${e.party ? ' · ' + esc(e.party) : ''}${e.by ? ' · by ' + esc(e.by) : ''}</small></div>${tag}${l ? ebtn(e.id, l) : ''}</div>`; };
+      const recent = pend.slice().reverse().map((e) => row({ type: e.type, amount: e.amount, bank: e.bank, party: e.party, by: e.u }, '<span class="pmtag w">waiting</span>')).concat(R ? R.rows.slice(0, 6).map((r) => row({ type: r[1], amount: r[2], bank: r[4], party: r[3], by: r[6], id: r[7], at: r[8] }, `<span class="pmtag">${esc(r[0] === td ? 'Today' : dShort(r[0]))}</span>`)) : []).slice(0, 6);
       const days7 = []; for (let k = 6; k >= 0; k--) days7.push(dayAgo(k));
       const rows7 = (R ? R.rows : []).concat(pend.map((e) => [e.date, e.type, e.amount, e.party || '', e.bank || 'Cash', '', e.u]));
       const total7 = rows7.filter((r) => days7.includes(r[0])).length;
-      el.innerHTML = `<div class="pmbar" style="margin-top:2px"><span>${R ? (R.scope === 'all' ? 'Everyone\'s entries' : 'Your entries') : (M.repBusy ? 'Loading…' : (M.pin ? '' : 'Enter PIN to load totals'))}</span><button data-m="dashreload">${M.repBusy ? 'Loading…' : 'Refresh'}</button></div>
+      el.innerHTML = `<div class="pmbar" style="margin-top:2px"><span>${R ? (R.scope === 'all' ? 'Everyone\'s entries' : 'Your entries') : (M.repBusy ? 'Loading…' : (M.pin ? '' : 'Enter PIN to load totals'))}</span><button data-m="dashreload">${M.repBusy ? CLK + 'Loading…' : 'Refresh'}</button></div>
         <div class="pmhero ${net < 0 ? 'neg' : ''}" style="margin-top:6px"><small>Net today</small><b>${net < 0 ? '−' : ''}${rs(Math.abs(net))}</b>
           <div class="hrow"><div><small>Received today</small><b>${rs(tin)}</b></div><div><small>Paid today</small><b>${rs(tout)}</b></div></div></div>
         ${names.length ? `<div class="sethead" style="margin:18px 2px 8px">Money in hand</div><div class="acctgrid">${names.map((n) => `<div class="acct ${n === 'Cash' ? 'cash' : 'bank'}"><span class="ai">${ic(n === 'Cash' ? 'cash' : 'bank', 20)}</span><small>${esc(n)}</small><b class="${bal[n] < 0 ? 'r' : ''}">${bal[n] < 0 ? '−' : ''}${rs(Math.abs(bal[n]))}</b></div>`).join('')}</div>` : ''}
@@ -202,7 +247,7 @@
   function repBase() {
     const R = M.rep && M.rep.user === (M.user && M.user.name) ? M.rep : null; if (!R) return null;
     const days = datesOf('cur'), pd = datesOf('prev'), ds = new Set(days), ps = new Set(pd);
-    const okA = (r) => M.racct === 'all' || r[4] === M.racct;
+    const meN = M.user && M.user.name, okA = (r) => (M.racct === 'all' || r[4] === M.racct) && (R.scope !== 'all' || M.rwho === 'all' || (M.rwho === 'me' ? r[6] === meN : r[6] === M.rwho));
     const base = R.rows.filter((r) => ds.has(r[0]) && okA(r)), prev = R.rows.filter((r) => ps.has(r[0]) && okA(r));
     const sum = (rows, ty) => rows.reduce((s, r) => s + (r[1] === ty ? r[2] : 0), 0);
     return { R, days, base, tin: sum(base, 'in'), tout: sum(base, 'out'), pin: sum(prev, 'in'), pout: sum(prev, 'out') };
@@ -218,7 +263,8 @@
     let h = '', last = '';
     l.slice(0, 150).forEach((r) => {
       if (r[0] !== last) { last = r[0]; h += `<div class="daygroup">${esc(dRel(r[0]))}</div>`; }
-      h += `<div class="pmrow" style="padding:10px 16px"><span class="pmi ${r[1]}">${r[1] === 'in' ? '+' : '−'}</span><div class="pmm"><b class="${r[1] === 'in' ? 'g' : 'r'}">${rs(r[2])}</b><small>${esc(r[4])}${r[3] ? ' · ' + esc(r[3]) : ''}${scope === 'all' && r[6] ? ' · by ' + esc(r[6]) : ''}${r[5] ? ' · ' + esc(r[5]) : ''}</small></div></div>`;
+      const l = editLeft(r[8], r[6]);
+      h += `<div class="pmrow" style="padding:10px 16px"><span class="pmi ${r[1]}">${r[1] === 'in' ? '+' : '−'}</span><div class="pmm"><b class="${r[1] === 'in' ? 'g' : 'r'}">${rs(r[2])}</b><small>${esc(r[4])}${r[3] ? ' · ' + esc(r[3]) : ''}${r[6] ? ' · by ' + esc(r[6]) : ''}${r[5] ? ' · ' + esc(r[5]) : ''}</small></div>${l ? ebtn(r[7], l) : ''}</div>`;
     });
     return h;
   }
@@ -239,18 +285,22 @@
     const el = $('#m-rep'); if (!el || !M.user) return;
     try {
       const waiting = M.q.filter((e) => e.u === M.user.name).length;
-      const chips = `<div class="chips" style="margin-top:4px">${RANGES.map((r) => `<button class="chip ${M.range === r[0] ? 'on' : ''}" data-m="range" data-v="${r[0]}">${r[1]}</button>`).join('')}</div>`;
+      const chips = '';
       if (!M.pin) { el.innerHTML = `<div class="form pay in">${pinPad('repin', 'Enter your PIN to see reports', 'Asked once, so the report can be read safely from the sheet.', M.repErr)}</div>`; return; }
       const B = repBase(), R = B && B.R;
-      const bar = `<div class="pmbar"><span>${R ? (R.scope === 'all' ? 'Everyone\'s entries' : 'Your entries') + ' · updated ' + new Date(R.time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : ''}</span><button data-m="reload">${M.repBusy ? 'Loading…' : 'Refresh'}</button></div>`;
+      const bar = `<div class="pmbar"><span>${R ? (R.scope === 'all' ? 'Everyone\'s entries' : 'Your entries') + ' · updated ' + new Date(R.time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : ''}</span><button data-m="reload">${M.repBusy ? CLK + 'Loading…' : 'Refresh'}</button></div>`;
       const msg = (M.repErr ? `<div class="banner bad" style="margin-top:10px">${esc(M.repErr)}</div>` : '') + (waiting ? `<div class="banner" style="margin-top:10px">${waiting} ${waiting === 1 ? 'entry is' : 'entries are'} still waiting to sync and not in this report yet.</div>` : '');
-      if (!B) { el.innerHTML = chips + bar + msg + `<div class="card empty" style="margin-top:12px"><b>${M.repBusy ? 'Loading report…' : 'No report yet'}</b>${M.repBusy ? '' : 'Tap Refresh to load it from the sheet.'}</div>`; return; }
+      if (!B) { el.innerHTML = `<div class="fbar"><label class="catsel"><select data-msel="range" aria-label="Period">${RANGES.map((r) => `<option value="${r[0]}"${String(M.range) === String(r[0]) ? ' selected' : ''}>${r[1]}</option>`).join('')}</select></label></div>` + bar + msg + `<div class="card empty" style="margin-top:12px"><b>${M.repBusy ? CLK + 'Loading report…' : 'No report yet'}</b>${M.repBusy ? '' : 'Tap Refresh to load it from the sheet.'}</div>`; return; }
       const accts = Object.keys(R.totals || {}).sort((x, y) => (x === 'Cash' ? -1 : y === 'Cash' ? 1 : x.localeCompare(y)));
       const acc = {}; B.base.forEach((r) => { const a = acc[r[4]] || (acc[r[4]] = { in: 0, out: 0 }); a[r[1]] += r[2]; });
       const bal = B.tin - B.tout;
       const hero = `<div class="pmhero ${bal < 0 ? 'neg' : ''}"><small>Balance for ${esc(periodName())}</small><b>${bal < 0 ? '−' : ''}${rs(Math.abs(bal))}</b>
         <div class="hrow"><div><small>Received</small><b>${rs(B.tin)}</b>${delta(B.tin, B.pin)}</div><div><small>Paid</small><b>${rs(B.tout)}</b>${delta(B.tout, B.pout)}</div></div><div class="hnote">${M.range === 'today' ? 'Compared with yesterday' : 'Compared with the period before'}</div></div>`;
-      const acctChips = accts.length > 1 ? `<div class="chips" style="margin-top:10px"><button class="chip ${M.racct === 'all' ? 'on' : ''}" data-m="racct" data-v="all">All accounts</button>${accts.map((n) => `<button class="chip ${M.racct === n ? 'on' : ''}" data-m="racct" data-v="${esc(n)}">${esc(n)}</button>`).join('')}</div>` : '';
+      const people = [...new Set(R.rows.map((r) => r[6]).filter((x) => x && x !== M.user.name))].sort();
+      const opt = (v, l, cur) => `<option value="${esc(v)}"${String(cur) === String(v) ? ' selected' : ''}>${esc(l)}</option>`;
+      const acctChips = `<div class="fbar"><label class="catsel"><select data-msel="range" aria-label="Period">${RANGES.map((r) => opt(r[0], r[1], M.range)).join('')}</select></label>`
+        + (accts.length > 1 ? `<label class="catsel"><select data-msel="acct" aria-label="Account">${opt('all', 'All accounts', M.racct)}${accts.map((n) => opt(n, n, M.racct)).join('')}</select></label>` : '')
+        + (R.scope === 'all' ? `<label class="catsel"><select data-msel="who" aria-label="Person">${opt('all', 'Everyone', M.rwho)}${opt('me', 'My entries', M.rwho)}${people.map((n) => opt(n, n, M.rwho)).join('')}</select></label>` : '') + `</div>`;
       const chart = M.range === 'today' ? '' : `<div class="card sec" style="margin-top:12px"><div class="sec-h"><h2>Day by day</h2></div><div style="padding:0 12px 12px">${payChart(B.days, B.base)}</div></div>`;
       const accHTML = Object.keys(acc).length || accts.length ? `<div class="card group" style="margin-top:12px"><h2>Cash and banks</h2><p>Received and paid in this period. Right side = balance now (all time).</p>${accts.concat(Object.keys(acc).filter((k) => !accts.includes(k))).map((n) => {
         const tt = (R.totals && R.totals[n]) || { in: 0, out: 0 }, nb = tt.in - tt.out, a = acc[n] || { in: 0, out: 0 };
@@ -285,7 +335,11 @@
         const e1 = $('#m-entry'), e2 = $('#m-rep');
         if (e1) e1.style.display = M.view === 'entry' ? 'block' : 'none'; if (e2) e2.style.display = M.view === 'report' ? 'block' : 'none';
         if (M.view === 'report') { drawReport(); loadReport(); }
-      } else if (a === 'range') { M.range = b.dataset.v; drawReport(); }
+      } else if (a === 'pedit') openPayEdit(b.dataset.id);
+      else if (a === 'peclose') { const x = $('#pe'); if (x) x.remove(); }
+      else if (a === 'pesave') payEditSend(b.dataset.id, false);
+      else if (a === 'pedel') { if (confirm((window.ARTIME_tr || ((x) => x))('Delete this entry?'))) payEditSend(b.dataset.id, true); }
+      else if (a === 'range') { M.range = b.dataset.v; drawReport(); }
       else if (a === 'rtype') { M.rtype = b.dataset.v; drawReport(); }
       else if (a === 'racct') { M.racct = b.dataset.v; drawReport(); }
       else if (a === 'add') { const i = $('#m-amt'); if (!i) return; const n = Number(b.dataset.v); i.value = n ? String((parseFloat(String(i.value).replace(/,/g, '')) || 0) + n) : ''; }
@@ -314,20 +368,21 @@
         const fm = $('#m-form'), sl = $('#m-sl'); if (fm) { fm.classList.remove('in', 'out'); fm.classList.add(M.type); }
         if (sl) sl.textContent = M.type === 'in' ? 'Save Payment In' : 'Save Payment Out';
       } else if (a === 'mode') {
+        if (b.dataset.v === 'bank' && !banks().length) { say('No bank account is set for you in the sheet.'); return; }
         M.mode = b.dataset.v; s('mode', M.mode); flip('#money [data-m="mode"]', M.mode);
         const bx = $('#m-bankbox'); if (bx) bx.style.display = M.mode === 'bank' ? 'block' : 'none';
         say('');
       } else if (a === 'bank') {
-        M.bank = b.dataset.v; s('bank', M.bank); const i = $('#m-bank'); if (i) i.value = M.bank; flip('#money [data-m="bank"]', M.bank);
+        M.bank = b.dataset.v; s('bank', M.bank); flip('#money [data-m="bank"]', M.bank);
       } else if (a === 'syncnow') sync();
       else if (a === 'ping') {
-        const say2 = (x) => { const el = $('#m-pmsg'); if (el) el.textContent = x; };
-        say2('Checking…');
+        const say2 = (x) => { const el = $('#m-pmsg'); if (el) el.innerHTML = x; };
+        say2(CLK + 'Checking…');
         post({ action: 'ping' }).then((j) => say2(j.ok ? 'Payments sheet is reachable ✓' : (j.net ? netMsg(j) : j.error || 'Not reachable')));
       } else if (a === 'pin') {
         const pin = M.pinBuf; if (!pin) return;
-        const t0 = Date.now(), el0 = $('#m-pmsg'); if (el0) el0.textContent = 'Checking…';
-        const tick = setInterval(() => { const el = $('#m-pmsg'); if (el) el.textContent = 'Checking… ' + Math.round((Date.now() - t0) / 1000) + 's'; }, 1000);
+        const t0 = Date.now(), el0 = $('#m-pmsg'); if (el0) el0.innerHTML = CLK + 'Checking…';
+        const tick = setInterval(() => { const el = $('#m-pmsg'); if (el) el.innerHTML = CLK + 'Checking… ' + Math.round((Date.now() - t0) / 1000) + 's'; }, 1000);
         post({ action: 'login', pin, dev }).then((j) => {
           if (j.ok && !j.name) { M.msg = 'This PIN has no name in the Users tab. Type the name in the Name column.'; }
           else if (j.ok) { M.user = { name: j.name, bank: j.bank || '', admin: !!j.admin }; M.pin = pin; M.msg = ''; keep(); toast('Welcome ' + j.name); try { window.store.set('by', j.name); } catch (e) { /* ignore */ } sync(); if (window.ARTIME_render) setTimeout(window.ARTIME_render, 0); }
@@ -338,9 +393,10 @@
         if (!(amt > 0)) { say('Enter an amount'); return; }
         let bank = 'Cash';
         if (M.mode === 'bank') {
-          bank = String(($('#m-bank') || {}).value || '').trim();
-          if (!bank) { say('Choose or type the bank'); return; }
-          M.bank = bank; s('bank', bank);
+          const bl = banks();
+          if (!bl.length) { say('No bank account is set for you in the sheet.'); return; }
+          if (!bl.includes(M.bank)) M.bank = bl[0];
+          bank = M.bank; s('bank', bank);
         }
         const val = (id) => String(($(id) || {}).value || '').trim();
         if (ag('payReqNote', false) && !val('#m-note')) { say('Add a note'); return; }
@@ -364,6 +420,11 @@
     if (!$('#m-dots') || ev.ctrlKey || ev.metaKey || ev.altKey) return;
     const k = /^\d$/.test(ev.key) ? ev.key : ev.key === 'Backspace' ? 'del' : ev.key === 'Enter' ? 'go' : '';
     if (k) { ev.preventDefault(); act('pk', { dataset: { v: k } }); }
+  });
+  document.addEventListener('change', (ev) => {                  // the three menus above the report
+    const k = ev.target && ev.target.dataset && ev.target.dataset.msel; if (!k) return;
+    if (k === 'range') M.range = ev.target.value; else if (k === 'acct') M.racct = ev.target.value; else if (k === 'who') M.rwho = ev.target.value;
+    drawReport();
   });
   document.addEventListener('input', (ev) => {
     if (ev.target && ev.target.id === 'm-rq') { M.rq = ev.target.value; const B = repBase(), l = $('#m-replist'); if (B && l) { l.innerHTML = listHTML(B.base, B.R.scope); const n = $('#m-repcnt'); if (n) n.textContent = listRows(B.base).length; } return; } if (ev.target && ev.target.id === 'm-bank') { M.bank = ev.target.value; flip('#money [data-m="bank"]', M.bank); } });
