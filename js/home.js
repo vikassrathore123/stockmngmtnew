@@ -13,44 +13,54 @@ function vHome() {
   const stock = its.filter((i) => !isDial(i.code)).reduce((a, i) => a + i.eff, 0);
   const outN = its.filter((i) => i.st === 'out').length;
   const lowN = its.filter((i) => i.st === 'low').length;
-  const alerts = its.filter((i) => i.st === 'out' || i.st === 'low').sort((a, b) => (a.st === 'out' ? 0 : 1) - (b.st === 'out' ? 0 : 1) || a.eff - b.eff).slice(0, 4);
+  const okN = Math.max(0, total - outN - lowN), alertN = outN + lowN;
   const nm = {}; its.forEach((i) => { nm[i.code] = i.title; });
-  const recent = sortMoves(moves()).slice(0, 4);
-  const c = chartData(S.homeRange);
+  const recent = sortMoves(moves()).slice(0, 3);
   const showInstall = S.installEvt && !isStandalone();
   const td = today(); let tin = 0, tout = 0;
   expMoves().forEach((e) => { if (e.date === td) { const q = Number(e.qty) || 0; if (e.type === 'in') tin += q; else tout += q; } });
-  const alertN = its.filter((i) => i.st === 'out' || i.st === 'low').length, pt = payToday();
+  const pt = payToday();
   const dialsToday = moves().filter((e) => e.date === td && isDial(e.code) && e.type === 'out').reduce((n, e) => n + (Number(e.qty) || 0), 0);
-  const hero = `<section class="today3"><div class="th"><span>Today</span><small>${esc(dLong(td))}</small></div><div class="tg">
-    <a class="tcard in" href="#/reports?t=in&r=1"><span class="ti">${ic('up', 22, 2.4)}</span><b>+${num(tin)}</b><small>Stock in</small></a>
-    <a class="tcard out" href="#/reports?t=out&r=1"><span class="ti">${ic('down', 22, 2.4)}</span><b>-${num(tout)}</b><small>Stock out</small></a>
-    <a class="tcard warn ${alertN ? 'urgent' : ''}" href="#/reorder"><span class="ti">${ic('alert', 22, 2.4)}</span><b>${alertN}</b><small>To reorder</small>${outN ? `<em>${outN} out of stock</em>` : ''}</a>
-    <a class="tcard dial" href="#/dialreport?r=1"><span class="ti">${ic('dial', 22, 2.2)}</span><b>${num(dialsToday)}</b><small>Dials made</small><em>See sizes and items</em></a></div></section>`;
-  const paycard = pt ? `<a class="card paytoday" href="#/payreport"><span class="ico">${ic('cash', 24)}</span><div class="pt"><small>Payments today</small><div class="pr"><b class="g">+${rupee(pt.i)}</b><b class="r">-${rupee(pt.o)}</b></div></div>${ic('right', 20)}</a>` : '';
-  return `${updBar()}${showInstall ? `<div class="install"><span class="t"><b>Install ARTIME Stock</b><small>Opens full screen like a normal app</small></span><button data-act="install">Install</button></div>` : ''}
-  ${hero}
-  <section class="stats">
-    <a class="stat blue" href="#/items"><span class="ico">${ic('cube', 24)}</span><span><small>Total Items</small><b>${num(total)}</b></span></a>
-    <a class="stat green" href="#/items?status=ok"><span class="ico">${ic('layers', 24)}</span><span><small>Total Stock</small><b>${num(stock)}</b></span></a>
-    <a class="stat red" href="#/reorder?f=out"><span class="ico">${ic('alert', 26, 2.2)}</span><span><small>Out of Stock</small><b>${outN}</b></span></a>
-    <a class="stat amber" href="#/reorder?f=low"><span class="ico">${ic('warn', 24, 2.1)}</span><span><small>Reorder Soon</small><b>${lowN}</b></span></a>
-  </section>
-  ${paycard}
-  ${store.get('homeAlerts', true) ? `<section class="card sec">
-    <div class="sec-h"><h2>Low Stock Alerts</h2><a class="link" href="#/reorder">View All ${ic('right', 16, 2.4)}</a></div>
-    ${alerts.length ? alerts.map((i) => itemRow(i)).join('') : `<div class="empty"><b>Nothing is running low</b>Items show here when they reach their reorder level.</div>`}
-  </section>` : ''}
-  <section class="dual">
-    <div class="card">
-      <div class="sec-h"><h2>Recent Stock Activity</h2><a class="link" href="#/reports">View All ${ic('right', 16, 2.4)}</a></div>
-      ${recent.length ? recent.map((e) => actRow(e, nm)).join('') : `<div class="empty"><b>No movements yet</b>Add your first Stock In or Stock Out.</div>`}
-    </div>
-    <div class="card">
-      <div class="sec-h"><h2>Stock Overview</h2><label class="sel"><select data-bind="homeRange" aria-label="Range"><option value="7"${S.homeRange === 7 ? ' selected' : ''}>Last 7 Days</option><option value="14"${S.homeRange === 14 ? ' selected' : ''}>Last 14 Days</option><option value="30"${S.homeRange === 30 ? ' selected' : ''}>Last 30 Days</option></select>${ic('chev', 16)}</label></div>
-      ${chartBlock(c)}
-    </div>
+
+  const today3 = `<section class="hm-today"><div class="hm-h"><h2>Today</h2><small>${esc(dLong(td))}</small></div>
+    <div class="card hm-io">
+      <a class="hm-io-c in" href="#/reports?t=in&r=1"><span class="hm-ico">${ic('up', 26, 2.6)}</span><span><small>Stock in</small><b>+${num(tin)}</b></span></a>
+      <a class="hm-io-c out" href="#/reports?t=out&r=1"><span class="hm-ico">${ic('down', 26, 2.6)}</span><span><small>Stock out</small><b>-${num(tout)}</b></span></a>
+    </div></section>`;
+
+  const reorder = alertN
+    ? `<a class="hm-reorder" href="#/reorder"><span class="hm-ico">${ic('alert', 26, 2.6)}</span>
+        <span class="hm-rm"><span class="hm-rn"><b>${alertN}</b> ${alertN === 1 ? 'item' : 'items'} to reorder</span>${outN ? `<em>${outN} out of stock</em>` : ''}</span>
+        <span class="hm-rbtn">Reorder now ${ic('right', 16, 2.6)}</span></a>`
+    : `<div class="hm-reorder fine"><span class="hm-ico">${ic('check', 26, 2.6)}</span><span class="hm-rm"><span class="hm-rn">Nothing to reorder</span><small>All items are above their reorder level</small></span></div>`;
+
+  const C = 2 * Math.PI * 42; let off = 0;
+  const seg = (n, col) => {
+    if (!n) return '';
+    const len = (n / total) * C, gap = total > n ? 2 : 0;
+    const r = `<circle cx="60" cy="60" r="42" fill="none" stroke="${col}" stroke-width="13" stroke-dasharray="${Math.max(0, len - gap).toFixed(2)} ${(C - Math.max(0, len - gap)).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}"/>`;
+    off += len; return r;
+  };
+  const donut = `<div class="hm-donut"><svg viewBox="0 0 120 120" role="img" aria-label="Items: ${okN} fine, ${lowN} low, ${outN} out"><g transform="rotate(-90 60 60)"><circle cx="60" cy="60" r="42" fill="none" style="stroke:var(--soft2)" stroke-width="13"/>${seg(okN, '#2fae8a')}${seg(lowN, '#f5b301')}${seg(outN, '#ec5757')}</g></svg><div class="hm-dc"><b>${num(stock)}</b><small>Total stock</small></div></div>`;
+
+  const overview = `<section class="card hm-sec"><div class="hm-h"><h2>Stock overview</h2><a class="link" href="#/items">See sizes &amp; items ${ic('right', 16, 2.4)}</a></div>
+    <div class="hm-ov">${donut}
+      <div class="hm-grid">
+        <a class="hm-st blue" href="#/items"><span class="hm-ico">${ic('cube', 22, 2.2)}</span><span><small>Total items</small><b>${num(total)}</b></span></a>
+        <a class="hm-st green" href="#/items?status=ok"><span class="hm-ico">${ic('layers', 22, 2.2)}</span><span><small>Total stock</small><b>${num(stock)}</b></span></a>
+        <a class="hm-st red" href="#/reorder?f=out"><span class="hm-ico">${ic('alert', 22, 2.4)}</span><span><small>Out of stock</small><b>${outN}</b></span></a>
+        <a class="hm-st amber" href="#/reorder?f=low"><span class="hm-ico">${ic('warn', 22, 2.2)}</span><span><small>Reorder soon</small><b>${lowN}</b></span></a>
+      </div></div></section>`;
+
+  const dialRow = `<a class="hm-line" href="#/dialreport?r=1"><span class="hm-ico dial">${ic('dial', 22, 2.2)}</span><span class="hm-lm"><b>${num(dialsToday)}</b> Dials made</span><small>See sizes &amp; items</small>${ic('right', 18, 2.2)}</a>`;
+  const payRow = pt ? `<a class="hm-line" href="#/payreport"><span class="hm-ico pay">${ic('cash', 22, 2.2)}</span><span class="hm-lm">Payments</span><span class="hm-pr"><b class="g">+${rupee(pt.i)}</b><b class="r">-${rupee(pt.o)}</b></span>${ic('right', 18, 2.2)}</a>` : '';
+  const activity = `<section class="card hm-sec"><div class="hm-h"><h2>Today's activity</h2><a class="link" href="#/reports">See all ${ic('right', 16, 2.4)}</a></div>
+    ${dialRow}${payRow}
+    ${recent.length ? recent.map((e) => actRow(e, nm)).join('') : `<div class="empty"><b>No movements yet</b>Add your first Stock In or Stock Out.</div>`}
   </section>`;
+
+  return `${updBar()}${showInstall ? `<div class="install"><span class="t"><b>Install ARTIME Stock</b><small>Opens full screen like a normal app</small></span><button data-act="install">Install</button></div>` : ''}
+  ${today3}${reorder}${overview}${activity}`;
 }
 
 function itemRow(i) {
