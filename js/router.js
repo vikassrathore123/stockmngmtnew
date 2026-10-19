@@ -14,6 +14,7 @@ function onRoute() {
   if (r.name === 'reports') store.set('repview', 'stock'); else if (r.name === 'payreport') store.set('repview', 'pay');
   const key = location.hash;
   if (r.name === 'reports') { const t = r.q.get('t'), rr = r.q.get('r'); if (t) S.repType = t === 'dial' ? 'all' : t; if (rr) S.repRange = Number(rr); }
+  if (r.name === 'dialreport' && r.q.get('r')) S.repRange = Number(r.q.get('r'));
   if ((r.name === 'reports' || r.name === 'dialreport') && S.repRange === 'custom') loadRange();
   if (r.name === 'items') S.filter = { q: '', cat: r.q.get('cat') || 'all', status: r.q.get('status') || (store.get('itemsDef', 'all') === 'alert' ? 'alert' : 'all') };
   if (isFormRoute(r.name)) {
