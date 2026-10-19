@@ -8,7 +8,7 @@ function dialState() {
   const row = ds.find((d) => d.code === f.dcode) || null;
   const q = Number(f.qty);
   const byCode = {}; items().forEach((i) => { byCode[i.code] = i; });
-  const parts = row ? dialParts(row.code).map((c, i) => ({ i, code: c, name: DIAL_PART_NAMES[i], it: byCode[c], on: !f.skip.includes(i) })).filter((p) => p.it) : [];
+  const parts = row ? dialParts(row.code).map((c, i) => ({ i, code: c, name: DIAL_PART_NAMES[i], it: byCode[c], on: (i === PAPER_IDX.H || i === PAPER_IDX.R) ? PAPER_IDX[f.paper] === i : !f.skip.includes(i) })).filter((p) => p.it) : [];
   const chosen = parts.filter((p) => p.on);
   const short = chosen.filter((p) => p.it.eff < q);
   const limit = chosen.length ? chosen.reduce((a, p) => (p.it.eff < a.it.eff ? p : a)) : null;
@@ -43,7 +43,7 @@ function updateDial() {
   const q = st.q > 0 ? st.q : 0;
   if (st.row) {
     card.innerHTML = `<div class="pcard"><div class="head">${art('Dial', 76)}<div><b>${esc(st.row.code)}</b><small>${esc(st.row.title)}</small></div></div>
-      <div class="parts-h"><span>Tick the parts that go out for ${num(q)} dial${q === 1 ? '' : 's'}</span><button class="selall" data-act="dall">${st.parts.some((p) => !p.on) ? 'Select all' : 'Clear all'}</button></div>
+      <div class="parts-h"><span>Tick the parts that go out for ${num(q)} dial${q === 1 ? '' : 's'}</span><button class="selall" data-act="dall">${st.parts.some((p) => !p.on && p.i !== PAPER_IDX.H && p.i !== PAPER_IDX.R) ? 'Select all' : 'Clear all'}</button></div>
       ${st.parts.map((p) => `<button class="part pick ${p.on ? 'on' : 'off'}" data-act="dpart" data-v="${p.i}" role="checkbox" aria-checked="${p.on}"><span class="cb">${p.on ? ic('check', 16, 3) : ''}</span><span class="pn">${esc(p.it.title)}</span>${p.on ? `<span class="pv">${num(p.it.eff)} &rarr; <b class="${p.it.eff - q < 0 ? 'r' : ''}">${num(p.it.eff - q)}</b></span>` : '<span class="pv skip">Not used</span>'}</button>`).join('')}</div>`;
   } else card.innerHTML = '';
   const hint = $('#qhint');
