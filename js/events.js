@@ -37,8 +37,13 @@ document.addEventListener('click', (ev) => {
     case 'repcsv': { const { nm, list } = repFiltered(); downloadCSV('stock-report.csv', [['Date', 'Type', 'Item', 'Code', 'Quantity', 'Supplier / Used for', 'Reference', 'Note', 'By']].concat(list.map((e) => [e.date, isDial(e.code) ? 'Dial Out' : e.type === 'in' ? 'Stock In' : 'Stock Out', nm[e.code] || e.code, e.code, e.qty, e.party || '', e.ref || '', e.note || '', e.by || '']))); break; }
     case 'fcat': ensureForm(type).cat = v; render(); break;
     case 'fsize': ensureForm(type).size = v; render(); break;
-    case 'dpart': { const f = ensureForm('dial'); const i = Number(v); f.skip = f.skip.includes(i) ? f.skip.filter((x) => x !== i) : f.skip.concat(i); updateDial(); break; }
-    case 'dall': { const f = ensureForm('dial'); f.skip = f.skip.length ? [] : DIAL_PART_NAMES.map((_, i) => i); updateDial(); break; }
+    case 'dpart': { const f = ensureForm('dial'); const i = Number(v);
+      if (i === PAPER_IDX.H || i === PAPER_IDX.R) f.paper = i === PAPER_IDX.H ? 'H' : 'R';   // exactly one paper is always selected
+      else f.skip = f.skip.includes(i) ? f.skip.filter((x) => x !== i) : f.skip.concat(i);
+      updateDial(); break; }
+    case 'dall': { const f = ensureForm('dial'); const anyOff = dialState().parts.some((p) => !p.on && p.i !== PAPER_IDX.H && p.i !== PAPER_IDX.R);
+      if (anyOff) f.skip = []; else f.skip = DIAL_PART_NAMES.map((_, i) => i).filter((i) => i !== PAPER_IDX.H && i !== PAPER_IDX.R);
+      updateDial(); break; }
     case 'dsize': ensureForm('dial').dcode = v; render(); break;
     case 'fvar': ensureForm(type).variant = v; render(); break;
     case 'qplus': case 'qminus': {
