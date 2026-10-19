@@ -1,6 +1,6 @@
 // Service worker: keeps the app opening instantly and working offline.
 // When you change any app file, bump CACHE (v1 -> v2) so phones pick up the update.
-const CACHE = 'artime-stock-v31';
+const CACHE = 'artime-stock-v32';
 const SHELL = [
   './', './index.html', './styles.css', './config.js', './money.js',
   './js/core.js', './js/lang-words.js', './js/lang-engine.js', './js/icons.js', './js/state.js', './js/router.js', './js/shell.js', './js/avatars.js', './js/money-link.js', './js/home.js', './js/charts.js', './js/items.js', './js/reports.js', './js/dial-report.js', './js/reorder-list.js', './js/settings.js', './js/forms.js', './js/sheet-toast.js', './js/events.js', './js/dial.js', './js/reorder-popups.js', './js/dropdown.js', './js/back-layers.js', './js/boot.js',
