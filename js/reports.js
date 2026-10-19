@@ -82,12 +82,19 @@ function repListHTML() {
   });
   return log;
 }
-function itemsWentHTML(per, nm, k) {                        // "Items that went out / came in" with the part that went inside Dial Outs
+function itemsWentHTML(per, nm, k) {                        // "Items that went out / came in": first 3, the rest behind a small button
   const rows = Object.entries(per).filter((x) => x[1][k] > 0).sort((x, y) => y[1][k] - x[1][k]);
   if (!rows.length) return '';
+  S.wentAll = S.wentAll || {};
+  const all = !!S.wentAll[k], show = all ? rows : rows.slice(0, 3);
   return `<div class="card sec" style="overflow:hidden"><div class="sec-h"><h2>${k === 'o' ? 'Items that went out' : 'Items that came in'}</h2><small class="cnt">${rows.length}</small></div>`
-    + rows.map(([c, p]) => `<div class="iw2"><span class="in">${esc(nm[c] || c)}${k === 'o' && p.v ? `<small>${num(p.v)} inside Dial Out</small>` : ''}</span><b class="${k === 'o' ? 'r' : 'g'}">${k === 'o' ? '-' : '+'}${num(p[k])}</b></div>`).join('') + `</div>`;
+    + show.map(([c, p]) => `<div class="iw2"><span class="in">${esc(nm[c] || c)}${k === 'o' && p.v ? `<small>${num(p.v)} inside Dial Out</small>` : ''}</span><b class="${k === 'o' ? 'r' : 'g'}">${k === 'o' ? '-' : '+'}${num(p[k])}</b></div>`).join('')
+    + (rows.length > 3 ? `<button class="morebtn" data-went="${k}">${all ? 'Show less' : 'Show more (' + (rows.length - 3) + ')'}</button>` : '') + `</div>`;
 }
+document.addEventListener('click', (ev) => {                  // the small Show more / Show less button
+  const b = ev.target.closest && ev.target.closest('[data-went]'); if (!b) return;
+  S.wentAll = S.wentAll || {}; S.wentAll[b.dataset.went] = !S.wentAll[b.dataset.went]; render();
+});
 function vReports() {
   const { nm, list } = repFiltered(), item = S.repItem || '', w = repWin();
   const c = chartData(0, item, w, repMoves()), st = repStats(item), per = repTop(item);
