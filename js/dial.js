@@ -42,9 +42,11 @@ function updateDial() {
   const st = dialState(); const card = $('#fcard'); if (!card) return;
   const q = st.q > 0 ? st.q : 0;
   if (st.row) {
-    card.innerHTML = `<div class="pcard"><div class="head">${art('Dial', 76)}<div><b>${esc(st.row.code)}</b><small>${esc(st.row.title)}</small></div></div>
+    const isPaper = (p) => p.i === PAPER_IDX.H || p.i === PAPER_IDX.R, papers = st.parts.filter(isPaper), others = st.parts.filter((p) => !isPaper(p));
+    const paperSw = papers.length ? `<div class="fl" style="margin-top:4px">Dial paper<i>*</i></div><div class="papsw" role="radiogroup" aria-label="Dial paper">${papers.map((p) => `<button class="${p.on ? 'on' : ''}" data-act="dpart" data-v="${p.i}" role="radio" aria-checked="${p.on}"><b>${p.i === PAPER_IDX.H ? 'Hindi' : 'Roman'}</b><small>${num(p.it.eff)} in stock</small></button>`).join('')}</div>` : '';
+    card.innerHTML = `${paperSw}<div class="pcard"><div class="head">${art('Dial', 76)}<div><b>${esc(st.row.code)}</b><small>${esc(st.row.title)}</small></div></div>
       <div class="parts-h"><span>Tick the parts that go out for ${num(q)} dial${q === 1 ? '' : 's'}</span><button class="selall" data-act="dall">${st.parts.some((p) => !p.on && p.i !== PAPER_IDX.H && p.i !== PAPER_IDX.R) ? 'Select all' : 'Clear all'}</button></div>
-      ${st.parts.map((p) => `<button class="part pick ${p.on ? 'on' : 'off'}" data-act="dpart" data-v="${p.i}" role="checkbox" aria-checked="${p.on}"><span class="cb">${p.on ? ic('check', 16, 3) : ''}</span><span class="pn">${esc(p.it.title)}</span>${p.on ? `<span class="pv">${num(p.it.eff)} &rarr; <b class="${p.it.eff - q < 0 ? 'r' : ''}">${num(p.it.eff - q)}</b></span>` : '<span class="pv skip">Not used</span>'}</button>`).join('')}</div>`;
+      ${others.map((p) => `<button class="part pick ${p.on ? 'on' : 'off'}" data-act="dpart" data-v="${p.i}" role="checkbox" aria-checked="${p.on}"><span class="cb">${p.on ? ic('check', 16, 3) : ''}</span><span class="pn">${esc(p.it.title)}</span>${p.on ? `<span class="pv">${num(p.it.eff)} &rarr; <b class="${p.it.eff - q < 0 ? 'r' : ''}">${num(p.it.eff - q)}</b></span>` : '<span class="pv skip">Not used</span>'}</button>`).join('')}</div>`;
   } else card.innerHTML = '';
   const hint = $('#qhint');
   if (hint) {
