@@ -2,7 +2,7 @@
 'use strict';
 /* ---------- Stock In / Out form ---------- */
 function ensureForm(type) {
-  if (!S.form[type]) S.form[type] = { t: type, cat: 'packing', base: null, variant: null, size: null, qty: 1, date: today(), party: '', ref: '', note: '', used: '', skip: [] };
+  if (!S.form[type]) S.form[type] = { t: type, cat: 'packing', base: null, variant: null, size: null, qty: 1, date: today(), party: '', ref: '', note: '', used: '', skip: [], paper: 'H' };
   return S.form[type];
 }
 function resolve(f) {
