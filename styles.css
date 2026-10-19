@@ -708,3 +708,36 @@ html[data-theme="dark"] .tcard.in { border-color: #1f5a49; } html[data-theme="da
 .av.anime { overflow: hidden; padding: 0; } .av.anime svg { width: 100%; height: 100%; display: block; }
 .avlab { font-size: 12.5px; font-weight: 800; color: var(--mute); text-transform: uppercase; letter-spacing: .06em; margin: 12px 0 8px; }
 .avopt .av.anime { background-clip: padding-box; }
+
+/* ================= round 8 ================= */
+/* clock splash while the app starts */
+.splash { min-height: 70vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: var(--ink); text-align: center; }
+.splash b { font-size: 26px; letter-spacing: .08em; } .splash small { color: var(--mute); font-size: 14px; }
+.bigclk { position: relative; width: 92px; height: 92px; border: 6px solid var(--blue); border-radius: 50%; box-shadow: 0 10px 28px rgba(31,95,230,.25); background: var(--card); }
+.bigclk i { position: absolute; inset: 5px; border-radius: 50%; background: repeating-conic-gradient(from -1.5deg, var(--mute) 0 3deg, transparent 3deg 30deg); -webkit-mask: radial-gradient(circle, transparent 66%, #000 67%); mask: radial-gradient(circle, transparent 66%, #000 67%); }
+.bigclk::before, .bigclk::after { content: ''; position: absolute; left: 50%; bottom: 50%; border-radius: 4px; transform-origin: 50% 100%; background: var(--ink); }
+.bigclk::before { width: 5px; height: 24px; margin-left: -2.5px; animation: clkr 14s linear infinite; }
+.bigclk::after { width: 4px; height: 34px; margin-left: -2px; background: var(--blue); animation: clkr 1.6s linear infinite; }
+/* side menu is the settings view */
+.drawer .dh { text-decoration: none; color: var(--ink); } .drawer .dh > svg { color: var(--mute); margin-left: auto; flex: none; } .drawer .dh .addn { color: var(--blue); }
+.drawer .dseg button { padding: 9px 6px; font-size: 14px; } .drawer .mi .sv { font-size: 13px; margin-right: 4px; }
+.drawer .dlang { margin: 2px 16px 0; }
+/* Reorder tabs */
+.rchips .rc { display: inline-flex; align-items: center; gap: 8px; } .rchips .rc em { font-style: normal; background: rgba(0,0,0,.09); border-radius: 99px; padding: 0 8px; font-size: 12.5px; }
+.rc.all { background: var(--soft); color: var(--ink2); } .rchips .rc.on { box-shadow: 0 0 0 2.5px var(--ink); }
+/* Save buttons stay in view: floating, bottom right */
+#fsubmit, #m-submit { position: fixed; right: max(16px, calc((100vw - 820px) / 2 + 16px)); bottom: calc(18px + env(safe-area-inset-bottom)); width: auto; min-width: 168px; height: 56px; margin: 0; padding: 0 26px; border-radius: 999px; z-index: 35; box-shadow: 0 12px 28px rgba(15,27,45,.32); }
+#m-submit { bottom: calc(96px + env(safe-area-inset-bottom)); }
+#app.noNav { padding-bottom: calc(110px + env(safe-area-inset-bottom)); }
+
+/* ---- dates, dial report ---- */
+.daterow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.daterow label { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 8px 12px; display: block; }
+.daterow small { display: block; color: var(--mute); font-size: 12px; font-weight: 700; }
+.daterow input { width: 100%; border: 0; background: transparent; font: inherit; font-weight: 650; color: var(--ink); padding: 2px 0; outline: 0; }
+.iw2 { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 10px 16px; border-top: 1px solid var(--line); }
+.iw2.head { color: var(--mute); font-size: 12.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; border-top: 0; background: var(--soft); }
+.iw2 .in { min-width: 0; overflow-wrap: anywhere; } .iw2 .in small { display: block; color: var(--mute); font-size: 12.5px; } .iw2 b { text-align: right; white-space: nowrap; }
+.dialn { text-align: right; font-size: 24px; font-weight: 800; color: var(--blue); line-height: 1; } .dialn small { display: block; font-size: 11.5px; font-weight: 700; color: var(--mute); margin-top: 3px; }
+.act.tap { cursor: pointer; } .act.tap:active { background: var(--soft); }
+.chip.dialchip { display: inline-flex; align-items: center; gap: 6px; color: var(--blue); border-color: var(--blue-t); background: var(--blue-t); }
