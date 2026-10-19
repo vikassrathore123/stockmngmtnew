@@ -9,7 +9,7 @@
   const ag = (k, d) => { try { const v = localStorage.getItem('artime.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } };   // settings made in the app
   const rs = (n) => '₹' + Number(n || 0).toLocaleString(ag('numfmt', 'in') === 'intl' ? 'en-US' : 'en-IN', { maximumFractionDigits: 2 });
   const M = { user: (() => { const u = g('user', null); return u && u.name ? u : null; })(), q: g('q', []), failed: g('failed', []), hist: g('hist', []), msg: '', type: g('type', 'in') === 'out' ? 'out' : 'in', mode: g('mode', 'cash') === 'bank' ? 'bank' : 'cash', bank: g('bank', ''),
-    view: 'entry', range: '7', rtype: 'all', racct: 'all', rwho: 'all', rq: '', pin: g('pin', null), pinBuf: '', pinMode: 'login', rep: g('rep', null), repBusy: false, repErr: '' };
+    view: 'entry', range: '7', rtype: 'all', racct: 'all', rwho: 'all', rq: '', rfrom: '', rto: '', repC: null, repCBusy: '', repCErr: '', pin: g('pin', null), pinBuf: '', pinMode: 'login', rep: g('rep', null), repBusy: false, repErr: '' };
   const dev = g('dev', null) || (() => { const d = 'd' + Math.random().toString(36).slice(2, 10); s('dev', d); return d; })();
   const url = () => g('url', '') || (window.APP_CONFIG && APP_CONFIG.moneyUrl) || '';
   const keep = () => { s('q', M.q); s('failed', M.failed); s('hist', M.hist); s('user', M.user); s('pin', M.pin); };
@@ -134,7 +134,7 @@
   function draw() {
     const el = $('#money'); if (!el) return;
     try {
-      if (!url()) { el.innerHTML = '<div class="card group"><h2>No payments sheet link yet</h2><p>Add the Payments Google Sheet link in Settings.</p><div class="btns"><a class="btn" href="#/more">Open Settings</a></div></div>'; return; }
+      if (!url()) { el.innerHTML = '<div class="card group"><h2>No payments sheet link yet</h2><p>Add the Payments Google Sheet link in Settings.</p><div class="btns"><a class="btn" href="#/set-sheets">Open Settings</a></div></div>'; return; }
       if (!M.user) { el.innerHTML = `<div class="form pay in">${pinPad('login', 'Log in to Payments', 'Enter your PIN. Only the first time on this phone.', M.msg)}</div>`; return; }
       const bl = banks(), ps = parties();
       if (!bl.includes(M.bank)) M.bank = bl[0] || '';
@@ -170,7 +170,7 @@
   }
 
   /* ---------- Report (read back from the Cash Book) ---------- */
-  const RANGES = [['today', 'Today'], ['7', '7 Days'], ['30', '30 Days'], ['month', 'This month']];
+  const RANGES = [['today', 'Today'], ['7', '7 Days'], ['30', '30 Days'], ['month', 'This month'], ['custom', 'Custom dates…']];
   const loc = () => { try { return JSON.parse(localStorage.getItem('artime.lang')) === 'hi' ? 'hi-IN' : 'en-GB'; } catch (e) { return 'en-GB'; } };
   const dShort = (d) => new Date(d + 'T12:00:00').toLocaleDateString(loc(), { day: 'numeric', month: 'short' });
   const dRel = (d) => (d === today() ? 'Today' : dShort(d));
@@ -201,7 +201,7 @@
   function drawDash() {
     const el = $('#paydash'); if (!el) return;
     try {
-      if (!url()) { el.innerHTML = '<div class="card group"><h2>No payments sheet link yet</h2><p>Add the Payments Google Sheet link in Settings.</p><div class="btns"><a class="btn" href="#/more">Open Settings</a></div></div>'; return; }
+      if (!url()) { el.innerHTML = '<div class="card group"><h2>No payments sheet link yet</h2><p>Add the Payments Google Sheet link in Settings.</p><div class="btns"><a class="btn" href="#/set-sheets">Open Settings</a></div></div>'; return; }
       if (!M.user) { el.innerHTML = '<div class="card group"><h2>Log in to see payments</h2><p>Enter your PIN once on this phone.</p><div class="btns"><a class="btn" style="background:var(--green)" href="#/pay">Enter PIN</a></div></div>'; return; }
       const R = M.rep && M.rep.user === M.user.name ? M.rep : null;
       const td = today(), pend = M.q.filter((e) => e.u === M.user.name);
@@ -232,8 +232,16 @@
     } catch (e) { /* dashboard problems must never block the app */ }
   }
   /* data for the chosen period: rows in range (account filter applied), the previous period for comparison */
+  const addDays = (d, n) => { const [y, mo, dd] = String(d).split('-').map(Number); return new Date(y, mo - 1, dd + n, 12).toLocaleDateString('en-CA'); };
+  const spanDays = (a, b) => Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / 864e5) + 1;
+  function cwin() { let f = M.rfrom || dayAgo(29), t = M.rto || today(); if (f > t) { const x = f; f = t; t = x; } return { from: f, to: t }; }
   function datesOf(kind) {
     const out = [], t = new Date();
+    if (M.range === 'custom') {
+      const w = cwin(), n = Math.min(400, spanDays(w.from, w.to));
+      for (let k = 0; k < n; k++) out.push(addDays(kind === 'prev' ? addDays(w.from, -n) : w.from, k));
+      return out;
+    }
     if (M.range === 'today') { const d = new Date(t); d.setDate(d.getDate() - (kind === 'prev' ? 1 : 0)); out.push(d.toLocaleDateString('en-CA')); return out; }
     if (M.range === 'month') {
       const y = t.getFullYear(), mo = t.getMonth() - (kind === 'prev' ? 1 : 0), n = kind === 'prev' ? new Date(y, mo + 1, 0).getDate() : t.getDate();
@@ -244,11 +252,23 @@
     for (let k = n - 1; k >= 0; k--) { const d = new Date(t); d.setDate(d.getDate() - k - off); out.push(d.toLocaleDateString('en-CA')); }
     return out;
   }
+  function srcRows(R) { const w = cwin(); return M.range === 'custom' && M.repC && M.repC.key === w.from + '|' + w.to ? M.repC.rows : R.rows; }
+  async function loadCustom() {                                    // asks the sheet for exactly these dates (plus the same number of days before, for the comparison)
+    if (M.range !== 'custom' || !M.user || !M.pin || !url()) return;
+    const w = cwin(), key = w.from + '|' + w.to; if ((M.repC && M.repC.key === key) || M.repCBusy === key) return;
+    if (!navigator.onLine) { M.repCErr = 'net'; return; }
+    M.repCBusy = key; M.repCErr = ''; drawReport();
+    const n = Math.min(400, spanDays(w.from, w.to)), j = await post({ action: 'report', pin: M.pin, dev, from: addDays(w.from, -n), to: w.to });
+    M.repCBusy = '';
+    if (j.ok && Array.isArray(j.rows) && j.range) M.repC = { key, rows: j.rows };
+    else M.repCErr = j.net ? 'net' : (j.ok ? 'old' : 'err');
+    drawReport();
+  }
   function repBase() {
     const R = M.rep && M.rep.user === (M.user && M.user.name) ? M.rep : null; if (!R) return null;
     const days = datesOf('cur'), pd = datesOf('prev'), ds = new Set(days), ps = new Set(pd);
     const meN = M.user && M.user.name, okA = (r) => (M.racct === 'all' || r[4] === M.racct) && (R.scope !== 'all' || M.rwho === 'all' || (M.rwho === 'me' ? r[6] === meN : r[6] === M.rwho));
-    const base = R.rows.filter((r) => ds.has(r[0]) && okA(r)), prev = R.rows.filter((r) => ps.has(r[0]) && okA(r));
+    const rows = srcRows(R), base = rows.filter((r) => ds.has(r[0]) && okA(r)), prev = rows.filter((r) => ps.has(r[0]) && okA(r));
     const sum = (rows, ty) => rows.reduce((s, r) => s + (r[1] === ty ? r[2] : 0), 0);
     return { R, days, base, tin: sum(base, 'in'), tout: sum(base, 'out'), pin: sum(prev, 'in'), pout: sum(prev, 'out') };
   }
@@ -280,7 +300,7 @@
     if (!prev) return cur > 0 ? '<em>new</em>' : '';
     const p = Math.round(((cur - prev) / prev) * 100); return `<em>${p >= 0 ? '▲' : '▼'} ${Math.abs(p)}%</em>`;
   };
-  const periodName = () => ({ today: 'Today', 7: 'Last 7 days', 30: 'Last 30 days', month: 'This month' }[M.range]);
+  const periodName = () => (M.range === 'custom' ? (cwin().from === cwin().to ? dShort(cwin().from) : dShort(cwin().from) + ' - ' + dShort(cwin().to)) : { today: 'Today', 7: 'Last 7 days', 30: 'Last 30 days', month: 'This month' }[M.range]);
   function drawReport() {
     const el = $('#m-rep'); if (!el || !M.user) return;
     try {
@@ -288,6 +308,9 @@
       const chips = '';
       if (!M.pin) { el.innerHTML = `<div class="form pay in">${pinPad('repin', 'Enter your PIN to see reports', 'Asked once, so the report can be read safely from the sheet.', M.repErr)}</div>`; return; }
       const B = repBase(), R = B && B.R;
+      const cw = cwin(), ck = cw.from + '|' + cw.to;
+      const dateRow = M.range === 'custom' ? `<div class="daterow"><label><small>From</small><input type="date" data-mdate="from" value="${esc(cw.from)}" max="${today()}"></label><label><small>To</small><input type="date" data-mdate="to" value="${esc(cw.to)}" max="${today()}"></label></div>`
+        + (M.repCBusy === ck ? `<div class="banner" style="margin-top:10px">${CLK}Loading these dates from the sheet…</div>` : M.repCErr === 'old' ? '<div class="banner bad" style="margin-top:10px">Older dates need the updated Payments script. Showing the last 3 months only.</div>' : M.repCErr === 'net' ? '<div class="banner bad" style="margin-top:10px">No connection. Showing the last 3 months only.</div>' : '') : '';
       const bar = `<div class="pmbar"><span>${R ? (R.scope === 'all' ? 'Everyone\'s entries' : 'Your entries') + ' · updated ' + new Date(R.time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : ''}</span><button data-m="reload">${M.repBusy ? CLK + 'Loading…' : 'Refresh'}</button></div>`;
       const msg = (M.repErr ? `<div class="banner bad" style="margin-top:10px">${esc(M.repErr)}</div>` : '') + (waiting ? `<div class="banner" style="margin-top:10px">${waiting} ${waiting === 1 ? 'entry is' : 'entries are'} still waiting to sync and not in this report yet.</div>` : '');
       if (!B) { el.innerHTML = `<div class="fbar"><label class="catsel"><select data-msel="range" aria-label="Period">${RANGES.map((r) => `<option value="${r[0]}"${String(M.range) === String(r[0]) ? ' selected' : ''}>${r[1]}</option>`).join('')}</select></label></div>` + bar + msg + `<div class="card empty" style="margin-top:12px"><b>${M.repBusy ? CLK + 'Loading report…' : 'No report yet'}</b>${M.repBusy ? '' : 'Tap Refresh to load it from the sheet.'}</div>`; return; }
@@ -296,7 +319,7 @@
       const bal = B.tin - B.tout;
       const hero = `<div class="pmhero ${bal < 0 ? 'neg' : ''}"><small>Balance for ${esc(periodName())}</small><b>${bal < 0 ? '−' : ''}${rs(Math.abs(bal))}</b>
         <div class="hrow"><div><small>Received</small><b>${rs(B.tin)}</b>${delta(B.tin, B.pin)}</div><div><small>Paid</small><b>${rs(B.tout)}</b>${delta(B.tout, B.pout)}</div></div><div class="hnote">${M.range === 'today' ? 'Compared with yesterday' : 'Compared with the period before'}</div></div>`;
-      const people = [...new Set(R.rows.map((r) => r[6]).filter((x) => x && x !== M.user.name))].sort();
+      const people = [...new Set(srcRows(R).map((r) => r[6]).filter((x) => x && x !== M.user.name))].sort();
       const opt = (v, l, cur) => `<option value="${esc(v)}"${String(cur) === String(v) ? ' selected' : ''}>${esc(l)}</option>`;
       const acctChips = `<div class="fbar"><label class="catsel"><select data-msel="range" aria-label="Period">${RANGES.map((r) => opt(r[0], r[1], M.range)).join('')}</select></label>`
         + (accts.length > 1 ? `<label class="catsel"><select data-msel="acct" aria-label="Account">${opt('all', 'All accounts', M.racct)}${accts.map((n) => opt(n, n, M.racct)).join('')}</select></label>` : '')
@@ -309,7 +332,7 @@
       const tp = Object.entries(agg).sort((x, y) => (y[1].i + y[1].o) - (x[1].i + x[1].o)).slice(0, 5), mx = tp.length ? tp[0][1].i + tp[0][1].o : 1;
       const parts = tp.length ? `<div class="card sec" style="margin-top:12px"><div class="sec-h"><h2>Top parties</h2></div>${tp.map(([n, v]) => `<div class="row plain"><div style="display:flex;justify-content:space-between;gap:10px"><b style="font-weight:600">${esc(n)}</b><span><b class="g">+${rs(v.i)}</b> <b class="r">−${rs(v.o)}</b></span></div><div class="bar"><i style="width:${Math.max(4, Math.round(((v.i + v.o) / mx) * 100))}%"></i></div></div>`).join('')}</div>` : '';
       const tch = (v, l) => `<button class="chip ${M.rtype === v ? 'on' : ''}" data-m="rtype" data-v="${v}">${l}</button>`;
-      el.innerHTML = chips + acctChips + bar + msg + hero
+      el.innerHTML = chips + acctChips + dateRow + bar + msg + hero
         + `<div class="repact"><button class="btn ghost" data-m="repshare">${ic('send', 18)}Share summary</button><button class="btn ghost" data-m="repcsv">${ic('download', 18)}Download Excel (CSV)</button></div>`
         + chart + accHTML + parts
         + `<div class="card sec" style="margin-top:12px;overflow:hidden"><div class="sec-h" style="padding:14px 16px 4px"><h2>Entries</h2><small class="cnt" id="m-repcnt">${listRows(B.base).length}</small></div>
@@ -423,13 +446,19 @@
   });
   document.addEventListener('change', (ev) => {                  // the three menus above the report
     const k = ev.target && ev.target.dataset && ev.target.dataset.msel; if (!k) return;
-    if (k === 'range') M.range = ev.target.value; else if (k === 'acct') M.racct = ev.target.value; else if (k === 'who') M.rwho = ev.target.value;
-    drawReport();
+    if (k === 'range') { M.range = ev.target.value; if (M.range === 'custom') { if (!M.rfrom) M.rfrom = dayAgo(29); if (!M.rto) M.rto = today(); } }
+    else if (k === 'acct') M.racct = ev.target.value; else if (k === 'who') M.rwho = ev.target.value;
+    drawReport(); if (M.range === 'custom') loadCustom();
+  });
+  document.addEventListener('change', (ev) => {
+    const k = ev.target && ev.target.dataset && ev.target.dataset.mdate; if (!k || !ev.target.value) return;
+    if (k === 'from') M.rfrom = ev.target.value; else M.rto = ev.target.value;
+    drawReport(); loadCustom();
   });
   document.addEventListener('input', (ev) => {
     if (ev.target && ev.target.id === 'm-rq') { M.rq = ev.target.value; const B = repBase(), l = $('#m-replist'); if (B && l) { l.innerHTML = listHTML(B.base, B.R.scope); const n = $('#m-repcnt'); if (n) n.textContent = listRows(B.base).length; } return; } if (ev.target && ev.target.id === 'm-bank') { M.bank = ev.target.value; flip('#money [data-m="bank"]', M.bank); } });
   window.addEventListener('online', () => later(500));
-  window.Money = { act, boot: () => later(800), mount: (view, t) => { M.msg = ''; M.view = view === 'report' ? 'report' : 'entry'; if (t === 'in' || t === 'out') { M.type = t; s('type', t); } const pm = ag('payMode', 'last'); if (pm === 'cash' || pm === 'bank') { M.mode = pm; s('mode', pm); } draw(); sync(); },
+  window.Money = { act, boot: () => later(800), mount: (view, t) => { M.msg = ''; M.view = view === 'report' ? 'report' : 'entry'; if (t === 'in' || t === 'out') { M.type = t; s('type', t); } const pm = ag('payMode', 'last'); if (pm === 'cash' || pm === 'bank') { M.mode = pm; s('mode', pm); } draw(); sync(); if (M.range === 'custom') loadCustom(); },
     warm: () => {                          // quietly fills Home's payments card; at most once per 5 minutes, never loops
       if (!M.user || !M.pin || M.repBusy || !navigator.onLine || Date.now() - (M.repTry || 0) < 300000) return;
       if (M.rep && M.rep.user === M.user.name && Date.now() - (M.repAt || 0) < 300000) return;
