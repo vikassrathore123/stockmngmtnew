@@ -17,8 +17,7 @@ function renderSheet() {
     const link = (href, icon, title, sub, val) => `<a class="mi" href="${href}">${ic(icon, 24)}<span><b>${title}</b>${sub ? `<small>${sub}</small>` : ''}</span>${val || ''}${ic('right', 18)}</a>`;
     const si = syncInfo(), nm = who(), [cs, cc] = connState(), th = store.get('theme', 'light');
     const dseg = (k, cur, opts) => `<div class="seg dseg">${opts.map(([v, l]) => `<button class="${cur === v ? 'on' : ''}" data-act="setv" data-k="${k}" data-v="${v}">${l}</button>`).join('')}</div>`;
-    el.innerHTML = `<div class="scrim side" data-act="close"><aside class="drawer" role="dialog" aria-label="Settings">
-      <a class="dh" href="#/set-profile">${avatarHTML()}<div class="dn">${nm ? `<b>${esc(nm)}</b>` : '<b class="addn">Add your name</b>'}<small>${roleLine()}</small></div>${ic('right', 18)}</a>
+    const inner = `      <a class="dh" href="#/set-profile">${avatarHTML()}<div class="dn">${nm ? `<b>${esc(nm)}</b>` : '<b class="addn">Add your name</b>'}<small>${roleLine()}</small></div>${ic('right', 18)}</a>
       <div class="dsync ${si.cls}">${si.cls === 'busy' ? '<i class="clk"></i>' : '<span class="pip"></span>'}<span class="t">${esc(si.txt)}</span><button data-act="sync">Sync now</button></div>
       <div class="dsec">Language</div>
       <div class="dlang">${langSeg()}</div>
@@ -37,7 +36,10 @@ function renderSheet() {
       ${link('#/set-about', 'info', 'About ARTIME', 'Version and updates')}
       ${link('#/set-adv', 'gear', 'Advanced settings', 'Local data, cache, reminders')}
       <div class="dfoot">${esc(APP_NAME)} &middot; v${APP_VER}</div>
-    </aside></div>`;
+    `;
+    const dr = el.querySelector('.drawer');
+    if (dr) { const top = dr.scrollTop; dr.innerHTML = inner; dr.scrollTop = top; }       // already open: change the content only, no flicker and no slide-in again
+    else el.innerHTML = `<div class="scrim side" data-act="close"><aside class="drawer" role="dialog" aria-label="Settings">${inner}</aside></div>`;
     return;
   }
   if (s.type === 'payadd') {
