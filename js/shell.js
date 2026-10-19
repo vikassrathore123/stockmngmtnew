@@ -87,7 +87,7 @@ function topForm(type) {
   return `<header class="top center"><a class="ibtn" href="#/home" aria-label="Back">${ic('left', 26)}</a>
     <div class="grow"><h1>Stock ${type === 'in' ? 'In' : 'Out'}</h1><div class="sub">${type === 'in' ? 'Add incoming stock to inventory' : 'Remove stock from inventory'}</div></div><span class="spacer"></span></header>`;
 }
-const APP_VER = 29;                                  // must match the cache number in sw.js
+const APP_VER = 30;                                  // must match the cache number in sw.js
 const payFirst = () => store.get('pref', 'stock') === 'pay';
 function syncInfo() {
   const n = S.queue.length;
