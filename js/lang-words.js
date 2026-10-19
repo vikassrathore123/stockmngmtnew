@@ -30,7 +30,7 @@ const HI = {
   'Choose an item.': 'आइटम चुनें।', 'Enter a quantity above 0.': '0 से ज़्यादा मात्रा डालें।', 'This item is out of stock.': 'यह आइटम स्टॉक में नहीं है।',
   'No dial items loaded yet. Go back and sync first.': 'अभी कोई डायल आइटम लोड नहीं। वापस जाकर पहले सिंक करें।', 'Choose a dial size.': 'डायल साइज़ चुनें।', 'Tick at least one part.': 'कम से कम एक पार्ट चुनें।',
   'Select all': 'सभी चुनें', 'Clear all': 'सभी हटाएँ', 'Not used': 'इस्तेमाल नहीं', 'Pcs': 'नग', 'Kg': 'किलो', 'Ltr': 'लीटर', 'Mtr': 'मीटर',
-  'Clock Hands': 'घड़ी की सुइयाँ', 'PVC Ring': 'PVC रिंग', 'PVC Paper': 'PVC पेपर', 'Glass': 'काँच', 'Iron Ring': 'आयरन रिंग', 'Machine': 'मशीन', 'Iron Plate': 'आयरन प्लेट', 'Tikkla': 'टिक्कला',
+  'Clock Hands': 'घड़ी की सुइयाँ', 'PVC Ring': 'PVC रिंग', 'PVC Paper': 'PVC पेपर', 'PVC Paper Hindi': 'PVC पेपर हिंदी', 'PVC Paper Roman': 'PVC पेपर रोमन', 'Glass': 'काँच', 'Iron Ring': 'आयरन रिंग', 'Machine': 'मशीन', 'Iron Plate': 'आयरन प्लेट', 'Tikkla': 'टिक्कला',
   'Added to Stock In': 'स्टॉक इन में जुड़ गया', 'Added to Stock Out': 'स्टॉक आउट में जुड़ गया', 'Dial Out recorded': 'डायल आउट दर्ज हुआ', 'Not added': 'जुड़ा नहीं',
   'Saving to Google Sheets in background': 'Google Sheets में पीछे सेव हो रहा है', 'Saved on this phone. It will sync when you are online.': 'इस फ़ोन में सेव हुआ। ऑनलाइन होते ही सिंक हो जाएगा।',
   'All parts for this size were taken out': 'इस साइज़ के सभी पार्ट्स निकाले गए', 'OK': 'ठीक है', 'New entry': 'नई एंट्री', 'Recent movements': 'हाल के लेन-देन', 'No movements for this item yet.': 'इस आइटम का अभी कोई लेन-देन नहीं।',
