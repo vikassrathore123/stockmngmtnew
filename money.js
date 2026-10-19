@@ -88,7 +88,7 @@
     el.innerHTML = `<div class="rsb"><div class="rsc"><div class="grab"></div><h3>Change this entry</h3>
       <small>${e.type === 'in' ? 'Payment In' : 'Payment Out'} · by ${esc(e.by)} · you can change it for ${left} more min</small>
       <label>Amount</label><input id="pe-amt" inputmode="decimal" value="${esc(e.amount)}">
-      <label>Cash or bank</label><select id="pe-bank">${accts.map((a) => `<option value="${esc(a)}"${a === e.bank ? ' selected' : ''}>${esc(a)}</option>`).join('')}</select>
+      <label>Cash or bank</label><div class="ddwrap"><select id="pe-bank">${accts.map((a) => `<option value="${esc(a)}"${a === e.bank ? ' selected' : ''}>${esc(a)}</option>`).join('')}</select></div>
       <label>Party / name</label><input id="pe-party" value="${esc(e.party)}">
       <label>Note</label><input id="pe-note" value="${esc(e.note)}">
       <label>Date</label><input id="pe-date" type="date" value="${esc(e.date)}">
@@ -112,6 +112,15 @@
       const x = $('#pe'); if (x) x.remove();
       toast(del ? 'Entry deleted' : 'Entry updated'); ui(); loadReport(true);
     } else msg(esc(j.net ? 'No internet. Try again when you are online.' : (j.error || 'Could not save the change.')));
+  }
+  function savedPop(e) {                                          // "Saved" confirmation: shows exactly what was saved
+    const old = $('#pd'); if (old) old.remove();
+    const el = document.createElement('div'); el.id = 'pd'; document.body.appendChild(el);
+    el.innerHTML = `<div class="rsb"><div class="rsc savedc"><div class="savedic ${e.type}">${ic('check', 34, 2.8)}</div><h3>Saved ✓</h3>
+      <div class="savedamt ${e.type === 'in' ? 'g' : 'r'}">${e.type === 'in' ? '+' : '−'}${rs(e.amount)}</div>
+      <small>${e.type === 'in' ? 'Payment In' : 'Payment Out'} · ${esc(e.bank)}${e.party ? ' · ' + esc(e.party) : ''}</small>
+      <small class="subtle">It is saved on this phone and goes to the sheet now.</small>
+      <button class="go" data-m="padd">Add another</button><button class="rcancel" data-m="pdone">Done</button></div></div>`;
   }
   const say = (m) => { M.msg = m; const el = $('#m-msg'); if (el) el.textContent = m; };
 
@@ -424,9 +433,21 @@
         const val = (id) => String(($(id) || {}).value || '').trim();
         if (ag('payReqNote', false) && !val('#m-note')) { say('Add a note'); return; }
         if (ag('payConfirm', false) && !confirm((M.type === 'in' ? 'Payment In ' : 'Payment Out ') + rs(amt) + ' (' + bank + ')?')) return;
-        M.q.push({ id: 'M' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), u: M.user.name, type: M.type, mode: M.mode, amount: amt, party: val('#m-party'), bank, note: val('#m-note'), date: val('#m-date') || today() });
+        if (Date.now() - (M.savedAt || 0) < 900) return;                                                // a fast double tap is one entry
+        const sig = [M.type, amt, val('#m-party').toLowerCase(), bank, val('#m-date')].join('|');
+        M.recent = (M.recent || []).filter((r) => Date.now() - r.at < 120000);
+        if (M.recent.some((r) => r.sig === sig) && !confirm((window.ARTIME_tr || ((x) => x))('Same entry was saved a moment ago. Save again?'))) return;
+        M.savedAt = Date.now(); M.recent.push({ sig, at: Date.now() });
+        const ent = { id: 'M' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), u: M.user.name, type: M.type, mode: M.mode, amount: amt, party: val('#m-party'), bank, note: val('#m-note'), date: val('#m-date') || today() };
+        M.q.push(ent);
         ['#m-amt', '#m-party', '#m-note'].forEach((id) => { const i = $(id); if (i) i.value = ''; });
-        say(''); keep(); ui(); toast('Saved on this phone'); sync();          // saved on the phone first, uploaded in the background
+        say(''); keep(); ui(); sync();                                                                  // saved on the phone first, uploaded in the background
+        savedPop(ent);
+      } else if (a === 'padd') { const x = $('#pd'); if (x) x.remove(); const i = $('#m-amt'); if (i) i.focus(); }
+      else if (a === 'pdone') {
+        const x = $('#pd'); if (x) x.remove();
+        const go = () => { location.hash = '#/home'; };
+        if (window.ARTIME_closeThen) window.ARTIME_closeThen(go); else go();
       } else if (a === 'retry') { const e = M.failed.find((x) => x.id === b.dataset.id); if (e) { M.failed = M.failed.filter((x) => x !== e); delete e.why; M.q.push(e); keep(); ui(); sync(); } }
       else if (a === 'del') { M.failed = M.failed.filter((x) => x.id !== b.dataset.id); keep(); ui(); }
       else if (a === 'logout') {
