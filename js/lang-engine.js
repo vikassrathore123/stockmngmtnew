@@ -2,6 +2,7 @@
 'use strict';
 const trAge = (s) => s.replace(/^just now$/, 'अभी').replace(/^(\d+) min ago$/, '$1 मिनट पहले').replace(/^(\d+) h ago$/, '$1 घंटे पहले');
 const HI_RULES = [
+  [/^Show more \((\d+)\)$/, (m) => 'और दिखाएँ (' + m[1] + ')'],
   [/^(\d+) (?:entry|entries)$/, (m) => m[1] + ' एंट्री'],
   [/^(\d+) (?:dial|dials) · (.+?)(?: · by (.+))?$/, (m) => m[1] + ' डायल · ' + T(m[2]) + (m[3] ? ' · ' + m[3] + ' द्वारा' : '')],
   [/^(\d+) inside Dial Out$/, (m) => m[1] + ' डायल आउट के अंदर'],
