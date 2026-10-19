@@ -769,3 +769,60 @@ label.catsel select, label.sel select, .ddwrap select, .field select { pointer-e
 .today3 .tg { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .tcard.dial { background: var(--blue-t); border-color: #b8d0ff; } .tcard.dial .ti { background: var(--blue); } .tcard.dial b, .tcard.dial small { color: var(--blue); }
 .tcard.dial em { background: var(--blue); color: #fff; } html[data-theme="dark"] .tcard.dial { border-color: #2a4a8a; }
+
+
+/* ---------- Home redesign (hm-*) ---------- */
+.hm-h { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 0 2px 10px; }
+.hm-h h2 { margin: 0; font-size: 21px; font-weight: 800; letter-spacing: -.01em; }
+.hm-h small { color: var(--mute); font-weight: 600; font-size: 13px; }
+.hm-sec { margin-top: 16px; padding: 16px 16px 6px; overflow: hidden; }
+.hm-sec .hm-h { padding: 0 0 12px; }
+.hm-today { margin-top: 4px; }
+.hm-ico { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; flex: none; }
+.hm-io { display: grid; grid-template-columns: 1fr 1fr; padding: 14px 8px; }
+.hm-io-c { display: flex; align-items: center; gap: 12px; padding: 4px 10px; min-width: 0; }
+.hm-io-c + .hm-io-c { border-left: 1px solid var(--line); }
+.hm-io-c small { display: block; color: var(--mute); font-size: 13px; font-weight: 600; }
+.hm-io-c b { display: block; font-size: 27px; line-height: 1.1; font-weight: 800; overflow-wrap: anywhere; }
+.hm-io-c.in .hm-ico { background: var(--green-t); color: var(--green); } .hm-io-c.in b { color: var(--green); }
+.hm-io-c.out .hm-ico { background: var(--red-t); color: var(--red); } .hm-io-c.out b { color: var(--red); }
+.hm-io-c:active { opacity: .7; }
+.hm-reorder { display: flex; align-items: center; gap: 12px; margin-top: 14px; padding: 14px; border-radius: 18px; background: var(--yellow-t); border: 1px solid #f1d98a; color: var(--ink); }
+.hm-reorder .hm-ico { background: var(--yellow); color: #3d2a00; width: 46px; height: 46px; }
+.hm-rm { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.hm-rn { font-size: 15px; font-weight: 650; } .hm-rn b { font-size: 30px; font-weight: 800; line-height: 1; margin-right: 2px; }
+.hm-rm em { font-style: normal; font-size: 12.5px; font-weight: 700; padding: 3px 10px; border-radius: 99px; background: rgba(245, 179, 1, .28); color: var(--yellow-d); }
+.hm-rbtn { display: inline-flex; align-items: center; gap: 4px; background: var(--yellow); color: #3d2a00; font-weight: 800; font-size: 14px; padding: 11px 14px; border-radius: 14px; white-space: nowrap; box-shadow: 0 1px 0 rgba(0,0,0,.08); }
+a.hm-reorder:active { transform: scale(.985); }
+.hm-reorder.fine { background: var(--green-t); border-color: #b9e5d3; } .hm-reorder.fine .hm-ico { background: var(--green); color: #fff; }
+.hm-reorder.fine .hm-rn { color: var(--green); font-size: 17px; font-weight: 750; } .hm-reorder.fine small { color: var(--mute); }
+html[data-theme="dark"] .hm-reorder { border-color: #6b5714; } html[data-theme="dark"] .hm-reorder.fine { border-color: #1f5a49; }
+.hm-ov { display: flex; align-items: center; gap: 14px; padding-bottom: 14px; }
+.hm-donut { position: relative; width: 132px; height: 132px; flex: none; }
+.hm-donut svg { width: 100%; height: 100%; display: block; }
+.hm-dc { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.hm-dc b { font-size: 21px; font-weight: 800; line-height: 1.1; } .hm-dc small { color: var(--mute); font-size: 11.5px; font-weight: 600; }
+.hm-grid { flex: 1; min-width: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 14px 10px; }
+.hm-st { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.hm-st .hm-ico { width: 38px; height: 38px; }
+.hm-st small { display: block; color: var(--mute); font-size: 12px; font-weight: 600; line-height: 1.2; } .hm-st b { display: block; font-size: 20px; font-weight: 800; line-height: 1.15; }
+.hm-st.blue .hm-ico { background: var(--blue-t); color: var(--blue); } .hm-st.green .hm-ico { background: var(--green-t); color: var(--green); }
+.hm-st.red .hm-ico { background: var(--red-t); color: var(--red); } .hm-st.amber .hm-ico { background: var(--amber-t); color: var(--amber); }
+.hm-line { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); color: var(--ink); }
+.hm-line .hm-ico { width: 40px; height: 40px; } .hm-line .hm-ico.dial { background: var(--blue-t); color: var(--blue); } .hm-line .hm-ico.pay { background: var(--green-t); color: var(--green); }
+.hm-lm { flex: 1; min-width: 0; font-weight: 650; } .hm-lm b { font-size: 20px; font-weight: 800; margin-right: 4px; }
+.hm-line > small { color: var(--mute); font-size: 13px; font-weight: 600; } .hm-line > .ic { color: var(--mute); }
+.hm-pr { display: flex; gap: 10px; font-size: 15px; } .hm-pr .g { color: var(--green); } .hm-pr .r { color: var(--red); }
+.hm-line:active { opacity: .7; }
+.hm-sec .act { padding-left: 0; padding-right: 0; }
+@media (max-width: 380px) { .hm-ov { flex-direction: column; align-items: stretch; } .hm-donut { align-self: center; } .hm-rbtn { padding: 10px 11px; font-size: 13px; } }
+
+/* Dial report: item details stay hidden until the card is tapped */
+details.dcard { padding: 0; overflow: hidden; }
+details.dcard > summary { list-style: none; cursor: pointer; gap: 12px; padding-bottom: 14px; }
+details.dcard > summary::-webkit-details-marker { display: none; }
+details.dcard > summary > div { flex: 1; min-width: 0; }
+details.dcard .dchev { color: var(--mute); display: grid; transition: transform .2s; }
+details.dcard[open] .dchev { transform: rotate(180deg); }
+details.dcard[open] > summary { border-bottom: 1px solid var(--line); }
+details.dcard > summary:active { background: var(--soft); }
