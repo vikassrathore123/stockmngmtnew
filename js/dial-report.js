@@ -12,10 +12,12 @@ function vDialReport() {
   const card = (code) => {
     const list = groups[code], n = list.reduce((s, e) => s + (Number(e.qty) || 0), 0);
     const used = dialParts(code).map((c) => [c, list.reduce((s, e) => s + (skippedOf(e.note).includes(c) ? 0 : Number(e.qty) || 0), 0)]);
-    return `<div class="card sec" style="overflow:hidden"><div class="sec-h"><div><h2>${esc(nm[code] || code)}</h2><small class="subtle">${list.length} ${list.length === 1 ? 'entry' : 'entries'}</small></div><span class="dialn">${num(n)}<small>dials</small></span></div>
+    const open = !!(S.dialOpen && S.dialOpen[code]);
+    return `<details class="card sec dcard" data-c="${esc(code)}"${open ? ' open' : ''} ontoggle="(S.dialOpen=S.dialOpen||{})[this.dataset.c]=this.open">
+      <summary class="sec-h"><div><h2>${esc(nm[code] || code)}</h2><small class="subtle">${list.length} ${list.length === 1 ? 'entry' : 'entries'} &middot; tap for item details</small></div><span class="dialn">${num(n)}<small>dials</small></span><i class="dchev">${ic('chev', 20, 2.4)}</i></summary>
       <div class="iw2 head"><span>Items used</span><span>Qty</span></div>
       ${used.map(([c, q]) => `<div class="iw2"><span class="in">${esc(nm[c] || c)}</span><b class="${q ? 'r' : ''}">${q ? '-' + num(q) : 'not used'}</b></div>`).join('')}
-      <div class="iw2 head"><span>Entries</span><span></span></div>${list.map((e) => actRow(e, nm)).join('')}</div>`;
+      <div class="iw2 head"><span>Entries</span><span></span></div>${list.map((e) => actRow(e, nm)).join('')}</details>`;
   };
   return `${periodBar(sizeSel)}
     <section class="rsum"><div class="b"><small>Dials made</small><b>${num(made)}</b></div><div class="g"><small>Entries</small><b>${num(entries.length)}</b></div><div class="r"><small>Sizes</small><b>${codes.length}</b></div></section>
