@@ -741,3 +741,31 @@ html[data-theme="dark"] .tcard.in { border-color: #1f5a49; } html[data-theme="da
 .dialn { text-align: right; font-size: 24px; font-weight: 800; color: var(--blue); line-height: 1; } .dialn small { display: block; font-size: 11.5px; font-weight: 700; color: var(--mute); margin-top: 3px; }
 .act.tap { cursor: pointer; } .act.tap:active { background: var(--soft); }
 .chip.dialchip { display: inline-flex; align-items: center; gap: 6px; color: var(--blue); border-color: var(--blue-t); background: var(--blue-t); }
+
+/* ================= round 9: our dropdowns, saved pop-up, Show more, dials card ================= */
+label.catsel select, label.sel select, .ddwrap select, .field select { pointer-events: none; }
+.ddwrap { position: relative; } .ddwrap select { appearance: none; -webkit-appearance: none; width: 100%; padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%2397a4b8' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
+#dd { position: fixed; inset: 0; z-index: 90; }
+#dd .ddb { position: absolute; inset: 0; background: rgba(15,27,45,.22); touch-action: none; animation: ddfade .14s ease-out; }
+#dd .ddp { position: absolute; background: var(--card); border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 18px 44px rgba(15,27,45,.30); overflow: hidden; display: flex; flex-direction: column; transform-origin: top center; animation: ddin .16s cubic-bezier(.2,.8,.3,1); }
+#dd .ddp.up { transform-origin: bottom center; }
+#dd.out .ddp { animation: ddout .13s ease-in forwards; } #dd.out .ddb { animation: ddfadeout .13s ease-in forwards; }
+.dds { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line); color: var(--mute); }
+.dds input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: inherit; color: var(--ink); }
+.ddl { overflow-y: auto; padding: 6px; -webkit-overflow-scrolling: touch; }
+.ddo { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; text-align: left; padding: 12px 12px; border-radius: 12px; font-size: 15.5px; font-weight: 600; color: var(--ink); }
+.ddo:active { background: var(--soft); } .ddo.on { background: var(--blue-t); color: var(--blue); font-weight: 750; } .ddo span { min-width: 0; overflow-wrap: anywhere; }
+@keyframes ddin { from { opacity: 0; transform: translateY(-6px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes ddout { to { opacity: 0; transform: translateY(-4px) scale(.98); } }
+@keyframes ddfade { from { opacity: 0; } to { opacity: 1; } } @keyframes ddfadeout { to { opacity: 0; } }
+#pd { position: fixed; inset: 0; z-index: 70; }
+.savedc { text-align: center; } .savedc h3 { margin: 6px 0 2px; font-size: 22px; }
+.savedic { width: 64px; height: 64px; border-radius: 50%; margin: 4px auto 6px; display: grid; place-items: center; color: #fff; animation: pop .35s cubic-bezier(.2,.9,.3,1.4); }
+.savedic.in { background: var(--green); } .savedic.out { background: var(--red); }
+.savedamt { font-size: 34px; font-weight: 800; margin: 2px 0 4px; } .savedc small { display: block; color: var(--mute); }
+@keyframes pop { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.morebtn { display: block; margin: 8px auto 12px; padding: 7px 16px; border-radius: 99px; background: var(--blue-t); color: var(--blue); font-weight: 700; font-size: 13.5px; }
+.today3 .tg { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.tcard.dial { background: var(--blue-t); border-color: #b8d0ff; } .tcard.dial .ti { background: var(--blue); } .tcard.dial b, .tcard.dial small { color: var(--blue); }
+.tcard.dial em { background: var(--blue); color: #fff; } html[data-theme="dark"] .tcard.dial { border-color: #2a4a8a; }
