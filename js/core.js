@@ -10,9 +10,11 @@ const isDial = (c) => /^DIL-/.test(c || '');
 const isFormRoute = (n) => n === 'in' || n === 'out' || n === 'dial';
 function dialParts(code) {
   const sz = String(code).slice(4); const s = (sz === '12' || sz === '18') ? '12-18' : sz;
-  return ['HND-' + s, 'PVR-' + s, 'PVP-' + s, 'GLS-' + s, 'IRR-' + s, 'MCH-ALL', 'IRP-' + s, sz === '06' ? 'TIK-06' : 'TIK-08-18'];
+  return ['HND-' + s, 'PVR-' + s, 'HPVP-' + s, 'RPVP-' + s, 'GLS-' + s, 'IRR-' + s, 'MCH-ALL', 'IRP-' + s, sz === '06' ? 'TIK-06' : 'TIK-08-18'];
 }
-const DIAL_PART_NAMES = ['Clock Hands', 'PVC Ring', 'PVC Paper', 'Glass', 'Iron Ring', 'Machine', 'Iron Plate', 'Tikkla'];
+const DIAL_PART_NAMES = ['Clock Hands', 'PVC Ring', 'PVC Paper Hindi', 'PVC Paper Roman', 'Glass', 'Iron Ring', 'Machine', 'Iron Plate', 'Tikkla'];
+// Positions 2 and 3 are the two paper types. A dial uses ONE of them, so the form treats them as a pick-one pair (Hindi / Roman).
+const PAPER_IDX = { H: 2, R: 3 };
 // A dial out with some parts left out carries a tag like [-TIK-08-18] in its note.
 // The Google Sheet ("Dial Recipe" tab) reads that tag and does not deduct that part.
 const skipTok = (c) => '[-' + c + ']';
