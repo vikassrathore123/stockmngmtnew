@@ -826,3 +826,10 @@ details.dcard .dchev { color: var(--mute); display: grid; transition: transform 
 details.dcard[open] .dchev { transform: rotate(180deg); }
 details.dcard[open] > summary { border-bottom: 1px solid var(--line); }
 details.dcard > summary:active { background: var(--soft); }
+
+/* Dial Out: Hindi / Roman paper switch under the size buttons */
+.papsw { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 6px 0 14px; }
+.papsw button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 8px; border-radius: 14px; border: 1.5px solid var(--line2); background: var(--card); color: var(--ink); }
+.papsw button b { font-size: 17px; font-weight: 800; } .papsw button small { color: var(--mute); font-size: 12.5px; font-weight: 600; }
+.papsw button.on { background: var(--blue-t); border-color: var(--blue); } .papsw button.on b { color: var(--blue); }
+.papsw button:active { transform: scale(.97); }
