@@ -19,8 +19,9 @@ async function autoCheckUpdate() {              // once every 6 hours at most, o
   if (!store.get('updAlert', true) || !navigator.onLine || Date.now() - store.get('updAt', 0) < 6 * 3600 * 1000) return;
   store.set('updAt', Date.now());
   try {
+    await verReady;
     const t = await (await fetch('sw.js?x=' + Date.now(), { cache: 'no-store' })).text(), mm = /artime-stock-v(\d+)/.exec(t);
-    if (mm && Number(mm[1]) > APP_VER) { S.newVer = Number(mm[1]); softRender(); }
+    if (APP_VER && mm && Number(mm[1]) > APP_VER) { S.newVer = Number(mm[1]); softRender(); }
   } catch (e) { /* offline is fine */ }
 }
 function hardRefresh() {                       // forget the saved app files and load the newest ones (entries stay)
@@ -33,8 +34,10 @@ async function checkUpdate() {
   const say = (t) => { const m = $('#upmsg'); if (m) m.innerHTML = (/^(Checking|Updating)/.test(t) ? '<i class="clk"></i>' : '') + esc(t); };
   say('Checking…');
   try {
+    await verReady;
     const t = await (await fetch('sw.js?x=' + Date.now(), { cache: 'no-store' })).text(), mm = /artime-stock-v(\d+)/.exec(t), v = mm ? Number(mm[1]) : 0;
-    if (v > APP_VER) { say('Updating to version v' + v + '…'); setTimeout(hardRefresh, 600); }
+    if (!APP_VER) say('Could not check. Check your internet and try again.');
+    else if (v > APP_VER) { say('Updating to version v' + v + '…'); setTimeout(hardRefresh, 600); }
     else say('You already have the latest version (v' + APP_VER + ').');
   } catch (e) { say('Could not check. Check your internet and try again.'); }
 }
@@ -87,7 +90,17 @@ function topForm(type) {
   return `<header class="top center"><a class="ibtn" href="#/home" aria-label="Back">${ic('left', 26)}</a>
     <div class="grow"><h1>Stock ${type === 'in' ? 'In' : 'Out'}</h1><div class="sub">${type === 'in' ? 'Add incoming stock to inventory' : 'Remove stock from inventory'}</div></div><span class="spacer"></span></header>`;
 }
-const APP_VER = 31;                                  // must match the cache number in sw.js
+let APP_VER = 0;                                    // read from the cache name in sw.js (artime-stock-vNN), so only sw.js is edited
+const verReady = (async () => {
+  try {                                             // the cache of the version this page was loaded from (lowest one while an update installs)
+    const nums = (window.caches ? await caches.keys() : []).map((k) => /^artime-stock-v(\d+)$/.exec(k)).filter(Boolean).map((m) => Number(m[1]));
+    if (nums.length) APP_VER = Math.min(...nums);
+  } catch (e) { /* fall through to the sw.js text */ }
+  if (!APP_VER) {                                   // first visit or no cache: sw.js was just loaded with the page
+    try { const mm = /artime-stock-v(\d+)/.exec(await (await fetch('sw.js?x=' + Date.now(), { cache: 'no-store' })).text()); if (mm) APP_VER = Number(mm[1]); } catch (e) { /* offline */ }
+  }
+  setTimeout(() => { if (APP_VER && typeof softRender === 'function') softRender(); }, 0);   // after the app has started
+})();
 const payFirst = () => store.get('pref', 'stock') === 'pay';
 function syncInfo() {
   const n = S.queue.length;
