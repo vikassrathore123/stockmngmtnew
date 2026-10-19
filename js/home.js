@@ -21,10 +21,12 @@ function vHome() {
   const td = today(); let tin = 0, tout = 0;
   expMoves().forEach((e) => { if (e.date === td) { const q = Number(e.qty) || 0; if (e.type === 'in') tin += q; else tout += q; } });
   const alertN = its.filter((i) => i.st === 'out' || i.st === 'low').length, pt = payToday();
+  const dialsToday = moves().filter((e) => e.date === td && isDial(e.code) && e.type === 'out').reduce((n, e) => n + (Number(e.qty) || 0), 0);
   const hero = `<section class="today3"><div class="th"><span>Today</span><small>${esc(dLong(td))}</small></div><div class="tg">
     <a class="tcard in" href="#/reports?t=in&r=1"><span class="ti">${ic('up', 22, 2.4)}</span><b>+${num(tin)}</b><small>Stock in</small></a>
     <a class="tcard out" href="#/reports?t=out&r=1"><span class="ti">${ic('down', 22, 2.4)}</span><b>-${num(tout)}</b><small>Stock out</small></a>
-    <a class="tcard warn ${alertN ? 'urgent' : ''}" href="#/reorder"><span class="ti">${ic('alert', 22, 2.4)}</span><b>${alertN}</b><small>To reorder</small>${outN ? `<em>${outN} out of stock</em>` : ''}</a></div></section>`;
+    <a class="tcard warn ${alertN ? 'urgent' : ''}" href="#/reorder"><span class="ti">${ic('alert', 22, 2.4)}</span><b>${alertN}</b><small>To reorder</small>${outN ? `<em>${outN} out of stock</em>` : ''}</a>
+    <a class="tcard dial" href="#/dialreport?r=1"><span class="ti">${ic('dial', 22, 2.2)}</span><b>${num(dialsToday)}</b><small>Dials made</small><em>See sizes and items</em></a></div></section>`;
   const paycard = pt ? `<a class="card paytoday" href="#/payreport"><span class="ico">${ic('cash', 24)}</span><div class="pt"><small>Payments today</small><div class="pr"><b class="g">+${rupee(pt.i)}</b><b class="r">-${rupee(pt.o)}</b></div></div>${ic('right', 20)}</a>` : '';
   return `${updBar()}${showInstall ? `<div class="install"><span class="t"><b>Install ARTIME Stock</b><small>Opens full screen like a normal app</small></span><button data-act="install">Install</button></div>` : ''}
   ${hero}
