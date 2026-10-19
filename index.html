@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div id="app"></div>
+  <div id="app"><div class="splash"><div class="bigclk"><i></i></div><b>ARTIME</b><small>Loading…</small></div></div>
   <nav id="nav" aria-label="Main"></nav>
   <div id="sheet"></div>
   <div id="popup"></div>
@@ -40,17 +40,38 @@
       };
       setTimeout(function () {
         var a = document.getElementById('app');
-        if (a && !a.innerHTML.trim()) {
+        if (a && (!a.innerHTML.trim() || a.querySelector('.splash'))) {
           a.innerHTML = '<div style="max-width:520px;margin:40px auto;padding:20px;font-family:system-ui,sans-serif;color:#0f172a">' +
             '<h2 style="margin:0 0 8px">ARTIME could not start</h2>' +
             '<p style="color:#475569;margin:0 0 12px">Your saved entries are safe. Tap the button to load the newest app files.</p>' +
             '<p style="background:#fef2f2;color:#b91c1c;padding:10px 12px;border-radius:10px;font-size:14px;word-break:break-word">' + esc(errs.length ? errs.join(' | ') : 'The app did not draw anything.') + '</p>' +
             '<button onclick="artimeFix()" style="background:#1f5fe6;color:#fff;border:0;border-radius:12px;padding:14px 18px;font-size:16px;font-weight:600;width:100%">Load newest files</button></div>';
         }
-      }, 4000);
+      }, 9000);
     })();
   </script>
   <script src="config.js"></script>
-  <script src="app.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/lang-words.js"></script>
+  <script src="js/lang-engine.js"></script>
+  <script src="js/icons.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/router.js"></script>
+  <script src="js/shell.js"></script>
+  <script src="js/avatars.js"></script>
+  <script src="js/money-link.js"></script>
+  <script src="js/home.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/items.js"></script>
+  <script src="js/reports.js"></script>
+  <script src="js/dial-report.js"></script>
+  <script src="js/reorder-list.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/forms.js"></script>
+  <script src="js/sheet-toast.js"></script>
+  <script src="js/events.js"></script>
+  <script src="js/dial.js"></script>
+  <script src="js/reorder-popups.js"></script>
+  <script src="js/boot.js"></script>
 </body>
 </html>
