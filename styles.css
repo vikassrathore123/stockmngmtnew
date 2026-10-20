@@ -833,3 +833,20 @@ details.dcard > summary:active { background: var(--soft); }
 .papsw button b { font-size: 17px; font-weight: 800; } .papsw button small { color: var(--mute); font-size: 12.5px; font-weight: 600; }
 .papsw button.on { background: var(--blue-t); border-color: var(--blue); } .papsw button.on b { color: var(--blue); }
 .papsw button:active { transform: scale(.97); }
+
+/* Stock lists: out of stock = red box, reorder soon = yellow box, in stock = green box (not used in the reorder list) */
+.row.st-out { background: var(--red-t); box-shadow: inset 4px 0 0 var(--red); }
+.row.st-low { background: var(--yellow-t); box-shadow: inset 4px 0 0 var(--yellow); }
+.row.st-ok { background: var(--green-t); box-shadow: inset 4px 0 0 var(--green); }
+.row.st-out + .row, .row.st-low + .row, .row.st-ok + .row { border-top: 2px solid var(--card); }
+.row.st-out .pill, .row.st-low .pill, .row.st-ok .pill { background: var(--card); }
+.row.st-out .end b { color: var(--red); } .row.st-low .end b { color: var(--yellow-d); } .row.st-ok .end b { color: var(--green); }
+
+/* Catalogs sheet */
+.catsub { margin: -4px 0 12px; color: var(--mute); font-size: 14px; }
+.catrow { display: flex; align-items: center; gap: 12px; padding: 12px; margin-bottom: 10px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); }
+.catrow .cico { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--red-t); color: var(--red); flex: none; }
+.catrow .cm { flex: 1; min-width: 0; } .catrow .cm b { display: block; font-size: 16px; font-weight: 700; } .catrow .cm small { color: var(--mute); font-size: 13px; }
+.catopen { color: var(--blue); font-weight: 700; font-size: 14px; padding: 8px 6px; }
+.catshare { display: inline-flex; align-items: center; gap: 6px; background: var(--blue); color: #fff; font-weight: 700; font-size: 14px; padding: 10px 14px; border-radius: 12px; border: 0; white-space: nowrap; }
+.catshare:disabled { opacity: .7; } .catshare:active { transform: scale(.96); }
