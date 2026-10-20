@@ -13,6 +13,7 @@ function who() {
 function renderSheet() {
   const el = $('#sheet'); const s = S.sheet;
   if (!s) { el.innerHTML = ''; return; }
+  if (s.type === 'catalogs') { el.innerHTML = catalogSheetHTML(); return; }
   if (s.type === 'menu') {
     const link = (href, icon, title, sub, val) => `<a class="mi" href="${href}">${ic(icon, 24)}<span><b>${title}</b>${sub ? `<small>${sub}</small>` : ''}</span>${val || ''}${ic('right', 18)}</a>`;
     const si = syncInfo(), nm = who(), [cs, cc] = connState(), th = store.get('theme', 'light');
@@ -35,6 +36,8 @@ function renderSheet() {
       ${S.installEvt && !isStandalone() ? `<button class="mi" data-act="install">${ic('download', 24)}<span><b>Install app</b><small>Opens full screen like a normal app</small></span></button>` : ''}
       ${link('#/set-about', 'info', 'About ARTIME', 'Version and updates')}
       ${link('#/set-adv', 'gear', 'Advanced settings', 'Local data, cache, reminders')}
+      ${catList().length ? `<div class="dsec">Share</div>
+      <button class="mi" data-cat-open>${ic('file', 24)}<span><b>Catalogs</b><small>Share clock catalogs (PDF)</small></span>${ic('right', 18)}</button>` : ''}
       <div class="dfoot">${esc(APP_NAME)} &middot; v${APP_VER}</div>
     `;
     const dr = el.querySelector('.drawer');

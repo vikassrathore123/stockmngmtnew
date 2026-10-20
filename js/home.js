@@ -64,7 +64,7 @@ function vHome() {
 }
 
 function itemRow(i) {
-  return `<button class="row" data-act="open-item" data-code="${esc(i.code)}">${art(i.base, 56)}
+  return `<button class="row st-${esc(i.st)}" data-act="open-item" data-code="${esc(i.code)}">${art(i.base, 56)}
     <span class="mid"><b>${esc(i.title)}</b><small>${esc(i.code)}</small></span>
     <span class="pillcol">${pill(i.st, i.code)}</span>
     <span class="end"><b>${num(i.eff)}</b><small>${esc(unitLabel(i.unit))}</small></span></button>`;
