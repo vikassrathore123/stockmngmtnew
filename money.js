@@ -23,13 +23,18 @@
   const idTime = (id) => { const n = parseInt(String(id || '').slice(1, 9), 36); return n > 1e12 ? n : 0; };        // phone-made ids carry their creation time
   const editLeft = (at, by) => (by && M.user && by === M.user.name && at && Date.now() - at < 30 * 60000 ? Math.max(1, Math.ceil((at + 30 * 60000 - Date.now()) / 60000)) : 0);
   const ebtn = (id, left) => `<button class="ebtn" data-m="pedit" data-id="${esc(id)}" aria-label="Change this entry">${ic('pencil', 16)}<small>${left} min</small></button>`;
-  async function post(body, u) {                       // never hangs, never throws; says why it failed
-    const c = new AbortController(), t = setTimeout(() => c.abort(), window.__MONEY_TMO || 15000);
+  async function post(body, u, tmo) {                       // never hangs, never throws; says why it failed
+    const c = new AbortController(), t = setTimeout(() => c.abort(), tmo || window.__MONEY_TMO || 15000);
     try {
       const r = await fetch(u || url(), { method: 'POST', body: JSON.stringify(body), signal: c.signal });
       if (r.ok === false) return { ok: false, error: 'The Payments link returned an error (HTTP ' + r.status + '). Check the deployment: Execute as Me, access Anyone.' };
       try { return JSON.parse(await r.text()); } catch (e) { return { ok: false, error: 'The Payments link did not answer correctly. Use the link ending in /exec, deployed for Anyone.' }; }
     } catch (e) { return { ok: false, net: true, why: c.signal.aborted ? 'no answer in 15 seconds' : String((e && e.message) || e) }; } finally { clearTimeout(t); }
+  }
+  async function loginPost(pin) {                      // first call after idle can be slow: wait longer, retry once
+    let j = await post({ action: 'login', pin, dev }, null, 40000);
+    if (j && j.net) j = await post({ action: 'login', pin, dev }, null, 40000);
+    return j;
   }
   const netMsg = (j) => 'No connection (' + (j.why || 'unknown') + '). Check the internet and the Payments link, then try again.';
 
@@ -144,7 +149,7 @@
     const el = $('#money'); if (!el) return;
     try {
       if (!url()) { el.innerHTML = '<div class="card group"><h2>No payments sheet link yet</h2><p>Add the Payments Google Sheet link in Settings.</p><div class="btns"><a class="btn" href="#/set-sheets">Open Settings</a></div></div>'; return; }
-      if (!M.user) { el.innerHTML = `<div class="form pay in">${pinPad('login', 'Log in to Payments', 'Enter your PIN. Only the first time on this phone.', M.msg)}</div>`; return; }
+      if (!M.user) { if (!M.warm) { M.warm = 1; post({ action: 'ping' }, null, 40000); } el.innerHTML = `<div class="form pay in">${pinPad('login', 'Log in to Payments', 'Enter your PIN. Only the first time on this phone.', M.msg)}</div>`; return; }
       const bl = banks(), ps = parties();
       if (!bl.includes(M.bank)) M.bank = bl[0] || '';
       if (M.mode === 'bank' && !bl.length) M.mode = 'cash';
@@ -389,7 +394,7 @@
       } else if (a === 'repin') {
         const pin = M.pinBuf; if (!pin) return;
         M.repErr = 'Checking…'; drawReport();
-        post({ action: 'login', pin, dev }).then((j) => {
+        loginPost(pin).then((j) => {
           if (j.ok && j.name === (M.user && M.user.name)) { M.pin = pin; M.pinBuf = ''; M.repErr = ''; keep(); loadReport(); }
           else { M.pinBuf = ''; M.repErr = j.net ? 'No connection. Try again.' : (j.ok ? 'That PIN belongs to someone else.' : (j.error || 'Wrong PIN')); drawReport(); }
         });
@@ -415,7 +420,7 @@
         const pin = M.pinBuf; if (!pin) return;
         const t0 = Date.now(), el0 = $('#m-pmsg'); if (el0) el0.innerHTML = CLK + 'Checking…';
         const tick = setInterval(() => { const el = $('#m-pmsg'); if (el) el.innerHTML = CLK + 'Checking… ' + Math.round((Date.now() - t0) / 1000) + 's'; }, 1000);
-        post({ action: 'login', pin, dev }).then((j) => {
+        loginPost(pin).then((j) => {
           if (j.ok && !j.name) { M.msg = 'This PIN has no name in the Users tab. Type the name in the Name column.'; }
           else if (j.ok) { M.user = { name: j.name, bank: j.bank || '', admin: !!j.admin }; M.pin = pin; M.msg = ''; keep(); toast('Welcome ' + j.name); try { window.store.set('by', j.name); } catch (e) { /* ignore */ } sync(); if (window.ARTIME_render) setTimeout(window.ARTIME_render, 0); }
           else M.msg = j.net ? netMsg(j) : (j.error || 'Wrong PIN');
