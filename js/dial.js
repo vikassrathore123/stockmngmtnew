@@ -35,7 +35,7 @@ function vDial() {
     </div>
     <label class="fl" for="note">Notes <small>(optional)</small></label>
     <div class="field">${ic('pencil', 20)}<input id="note" placeholder="Add notes..." value="${esc(f.note)}" data-bind="note" autocomplete="off"></div>
-    <button class="submit" id="fsubmit" data-act="submit">${ic('down', 24, 2.2)}<span>Record Dial Out</span></button>
+    <button class="submit" id="fsubmit" data-act="submit">${ic('down', 24, 2.2)}<span>Record Send to Production</span></button>
   </div>`;
 }
 function updateDial() {
@@ -66,7 +66,7 @@ async function submitDial() {
   const e = { id: newId(), ts: Date.now(), type: 'out', code: st.row.code, qty: st.q, date: f.date || today(), party: (f.used || '').trim() || 'Production', ref: (f.ref || '').trim(), note };
   S.queue.push(e); saveQueue();
   const online = navigator.onLine && S.url;
-  const pop = { kind: 'out', title: 'Dial Out recorded', item: st.row.title, qty: '-' + num(e.qty) + ' dial' + (e.qty === 1 ? '' : 's'), now: left.length ? 'Without ' + left.map((p) => p.name).join(', ') : 'All parts for this size were taken out', status: online ? 'ok' : 'warn', msg: online ? 'Saving to Google Sheets in background' : 'Saved on this phone. It will sync when you are online.' };
+  const pop = { kind: 'out', title: 'Sent to Production', item: st.row.title, qty: '-' + num(e.qty) + ' dial' + (e.qty === 1 ? '' : 's'), now: left.length ? 'Without ' + left.map((p) => p.name).join(', ') : 'All parts for this size were taken out', status: online ? 'ok' : 'warn', msg: online ? 'Saving to Google Sheets in background' : 'Saved on this phone. It will sync when you are online.' };
   f.qty = 1; f.ref = ''; f.note = ''; f.skip = [];
   render();
   showPopup(pop);

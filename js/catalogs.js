@@ -2,7 +2,7 @@
 'use strict';
 const CAT_FILES = {};   // PDFs already downloaded in this session, so a second share is instant
 const catList = () => (Array.isArray(window.CATALOGS) ? window.CATALOGS : []).filter((c) => c && c.file);
-const catUrl = (c) => new URL('catalogs/' + encodeURIComponent(c.file), document.baseURI).href;
+const catUrl = (c) => new URL('Catalogs/' + encodeURIComponent(c.file), document.baseURI).href;
 function catalogSheetHTML() {
   const list = catList();
   const rows = list.length
@@ -39,7 +39,7 @@ async function catShare(i, btn) {
       setTimeout(() => URL.revokeObjectURL(a.href), 4000); toast('Catalog downloaded');
     }
   } catch (e) {
-    if (!e || e.name !== 'AbortError') toast(e && e.message === 'missing' ? 'File not found: catalogs/' + c.file : 'Could not share this catalog', true);
+    if (!e || e.name !== 'AbortError') toast(e && e.message === 'missing' ? 'File not found: Catalogs/' + c.file : 'Could not share this catalog', true);
   } finally { btn.disabled = false; if (!again) lab.textContent = old; }
 }
 document.addEventListener('click', (ev) => {

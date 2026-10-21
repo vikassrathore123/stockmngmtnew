@@ -12,7 +12,7 @@ function payToday() {                       // today's money in/out from what th
   return { i, o };
 }
 function quickTiles(withPay) {
-  return `<section class="qa"><a class="qt in" href="#/in">${ic('up', 28, 2.2)}<b>Stock In</b></a><a class="qt out" href="#/out">${ic('down', 28, 2.2)}<b>Stock Out</b></a><a class="qt dial" href="#/dial">${ic('dial', 28, 2.2)}<b>Dial Out</b></a>${withPay ? `<a class="qt pay" href="#/pay">${ic('cash', 28, 2)}<b>Payments</b></a>` : `<a class="qt items" href="#/items">${ic('cube', 28, 2)}<b>Items</b></a>`}</section>`;
+  return `<section class="qa"><a class="qt in" href="#/in">${ic('up', 28, 2.2)}<b>Stock In</b></a><a class="qt out" href="#/out">${ic('down', 28, 2.2)}<b>Stock Out</b></a><a class="qt dial" href="#/prod">${ic('dial', 28, 2.2)}<b>Production</b></a>${withPay ? `<a class="qt pay" href="#/pay">${ic('cash', 28, 2)}<b>Payments</b></a>` : `<a class="qt items" href="#/items">${ic('cube', 28, 2)}<b>Items</b></a>`}</section>`;
 }
 function updBar() { return S.newVer ? `<div class="updbar"><span>${ic('download', 18)}New version v${S.newVer} is ready</span><button data-act="upcheck">Update now</button></div>` : ''; }
 async function autoCheckUpdate() {              // once every 6 hours at most, only to show the "new version" message
@@ -85,8 +85,10 @@ function vHomePay() {
     <a class="card payalert" href="#/stock">${ic('cube', 24)}<span><b>Stock Overview</b><small>Items and alerts</small></span>${ic('right', 18)}</a>`;
 }
 function topForm(type) {
+  if (type === 'ready' || type === 'sold') return `<header class="top center"><a class="ibtn" href="#/prod" aria-label="Back">${ic('left', 26)}</a>
+    <div class="grow"><h1>${type === 'ready' ? 'Dial Ready' : 'Dial Out'}</h1><div class="sub">${type === 'ready' ? 'Finished dials came back from production' : 'Ready dials sold or sent out'}</div></div><span class="spacer"></span></header>`;
   if (type === 'dial') return `<header class="top center"><a class="ibtn" href="#/home" aria-label="Back">${ic('left', 26)}</a>
-    <div class="grow"><h1>Dial Out</h1><div class="sub">Make dials - the parts go out together</div></div><span class="spacer"></span></header>`;
+    <div class="grow"><h1>Send to Production</h1><div class="sub">The parts go out together for making dials</div></div><span class="spacer"></span></header>`;
   return `<header class="top center"><a class="ibtn" href="#/home" aria-label="Back">${ic('left', 26)}</a>
     <div class="grow"><h1>Stock ${type === 'in' ? 'In' : 'Out'}</h1><div class="sub">${type === 'in' ? 'Add incoming stock to inventory' : 'Remove stock from inventory'}</div></div><span class="spacer"></span></header>`;
 }

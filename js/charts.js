@@ -5,7 +5,7 @@ function chartData(days, item, win, list) {
   const ds = win ? winDays(win) : []; if (!win) for (let k = days - 1; k >= 0; k--) ds.push(ago(k));
   const m = {}; ds.forEach((d) => { m[d] = { i: 0, o: 0 }; });
   let ti = 0, to = 0;
-  const src = item && isDial(item) ? (list || moves()).filter((e) => e.code === item) : expMoves(list).filter((e) => !item || e.code === item);   // a Dial Out counts every part that went
+  const src = item && isDial(item) ? (list || moves()).filter((e) => e.code === item && e.type === 'out') : expMoves(list).filter((e) => !item || e.code === item);   // a Dial Out counts every part that went
   src.forEach((e) => { const b = m[e.date]; if (!b) return; const q = Number(e.qty) || 0; if (e.type === 'in') { b.i += q; ti += q; } else { b.o += q; to += q; } });
   return { ds, m, ti, to };
 }

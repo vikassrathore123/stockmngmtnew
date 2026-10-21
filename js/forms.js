@@ -65,6 +65,7 @@ function formState(type) {
 }
 function updateFormDynamic() {
   const r = route(); if (r.name === 'dial') { updateDial(); return; }
+  if (r.name === 'ready' || r.name === 'sold') { updateProdForm(); return; }
   if (r.name !== 'in' && r.name !== 'out') return;
   const type = r.name; const st = formState(type); const row = st.row;
   const card = $('#fcard'); if (!card) return;

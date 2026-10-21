@@ -7,7 +7,7 @@ const CLOCK_ITEMS = ['Clock Hands', 'PVC Ring', 'PVC Paper', 'Glass', 'Iron Ring
 // Dial = a stand-alone item (no category). It is never bought, only made: one dial uses 1 each of Clock Hands, PVC Ring, PVC Paper, Glass, Iron Ring, Machine, Iron Plate and Tikkla of its size.
 // The Google Sheet ("Dial Recipe" tab) does the real deduction; this list is only used to show the parts on screen.
 const isDial = (c) => /^DIL-/.test(c || '');
-const isFormRoute = (n) => n === 'in' || n === 'out' || n === 'dial';
+const isFormRoute = (n) => n === 'in' || n === 'out' || n === 'dial' || n === 'ready' || n === 'sold';
 function dialParts(code) {
   const sz = String(code).slice(4); const s = (sz === '12' || sz === '18') ? '12-18' : sz;
   return ['HND-' + s, 'PVR-' + s, 'HPVP-' + s, 'RPVP-' + s, 'GLS-' + s, 'IRR-' + s, 'MCH-ALL', 'IRP-' + s, sz === '06' ? 'TIK-06' : 'TIK-08-18'];

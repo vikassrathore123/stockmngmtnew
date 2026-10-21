@@ -45,6 +45,8 @@ document.addEventListener('click', (ev) => {
       if (anyOff) f.skip = []; else f.skip = DIAL_PART_NAMES.map((_, i) => i).filter((i) => i !== PAPER_IDX.H && i !== PAPER_IDX.R);
       updateDial(); break; }
     case 'dsize': ensureForm('dial').dcode = v; render(); break;
+    case 'psize': ensureForm(type).dcode = v; render(); break;
+    case 'popen': { const f = ensureForm(type); f.opening = !f.opening; render(); break; }
     case 'fvar': ensureForm(type).variant = v; render(); break;
     case 'qplus': case 'qminus': {
       const f = ensureForm(type); const n = Number(f.qty) || 0;
@@ -52,7 +54,7 @@ document.addEventListener('click', (ev) => {
       const i = $('#qty'); if (i) i.value = f.qty; updateFormDynamic(); break;
     }
     case 'pick': { const i = $('#date'); if (i && i.showPicker) { try { i.showPicker(); } catch (e) { /* not supported */ } } break; }
-    case 'submit': if (type === 'dial') submitDial(); else submitForm(type); break;
+    case 'submit': if (type === 'dial') submitDial(); else if (type === 'ready' || type === 'sold') submitProd(type); else submitForm(type); break;
     case 'pop-ok': closePopup(); break;
     case 'save-url': {
       const val = ($('#url').value || '').trim();

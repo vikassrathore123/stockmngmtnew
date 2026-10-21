@@ -44,7 +44,7 @@ function periodBar(extra) {                                 // ONE bar: period (
   return `<div class="fbar"><label class="catsel"><select data-bind="repRange" aria-label="Period">${ro(1, 'Today')}${ro(7, 'Last 7 Days')}${ro(14, 'Last 14 Days')}${ro(30, 'Last 30 Days')}${ro(90, 'Last 90 Days')}${ro('custom', 'Custom dates…')}</select></label>${extra || ''}</div>${dates}${note}`;
 }
 
-function repSrc(item) { const all = repMoves(); return item && isDial(item) ? all.filter((e) => e.code === item) : expMoves(all).filter((e) => !item || e.code === item); }
+function repSrc(item) { const all = repMoves(); return item && isDial(item) ? all.filter((e) => e.code === item && e.type === 'out') : expMoves(all).filter((e) => !item || e.code === item); }
 const inWin = (e, w) => e.date >= w.from && e.date <= w.to;
 function repStats(item) {
   const w = repWin(); let ti = 0, to = 0, dials = 0;
@@ -63,7 +63,7 @@ function repFiltered() {
   const raw = sortMoves(all.filter((e) => inWin(e, w)));
   let base, list;
   if (item) {
-    base = isDial(item) ? raw.filter((e) => e.code === item) : sortMoves(expMoves(all).filter((e) => inWin(e, w) && e.code === item)); list = base;
+    base = isDial(item) ? raw.filter((e) => e.code === item && e.type === 'out') : sortMoves(expMoves(all).filter((e) => inWin(e, w) && e.code === item)); list = base;
     if (S.repType === 'in') list = base.filter((e) => e.type === 'in'); else if (S.repType === 'out') list = base.filter((e) => e.type === 'out');
   } else {
     base = raw; list = raw;                                  // a Dial Out stays ONE row; tap it to see the items
@@ -113,7 +113,7 @@ function vReports() {
     ${item || S.repType !== 'all' ? '' : `<div class="dual"><div class="card sec"><div class="sec-h"><h2>Most used</h2></div>${bars(tu, 'r', '-')}</div>
     <div class="card sec"><div class="sec-h"><h2>Most received</h2></div>${bars(tg, 'g', '+')}</div></div>`}
     <div class="card sec" style="overflow:hidden"><div class="sec-h"><h2>All movements</h2><small class="cnt" id="repcnt">${list.length}</small></div>
-      <div class="chips inner">${REP_TYPES.map((t) => tchip(t[0], t[1])).join('')}<a class="chip dialchip" href="#/dialreport">${ic('dial', 16)}Dial Out</a></div>
+      <div class="chips inner">${REP_TYPES.map((t) => tchip(t[0], t[1])).join('')}<a class="chip dialchip" href="#/dialreport">${ic('dial', 16)}Sent to Production</a></div>
       <div class="search inner">${ic('search', 20)}<input id="rq" type="search" placeholder="Search item, supplier or note" value="${esc(S.repQ)}" data-bind="rq" autocomplete="off"></div>
       <div id="replist">${repListHTML()}</div></div>`;
 }

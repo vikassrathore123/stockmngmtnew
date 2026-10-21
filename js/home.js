@@ -52,7 +52,7 @@ function vHome() {
         <a class="hm-st amber" href="#/reorder?f=low"><span class="hm-ico">${ic('warn', 22, 2.2)}</span><span><small>Reorder soon</small><b>${lowN}</b></span></a>
       </div></div></section>`;
 
-  const dialRow = `<a class="hm-line" href="#/dialreport?r=1"><span class="hm-ico dial">${ic('dial', 22, 2.2)}</span><span class="hm-lm"><b>${num(dialsToday)}</b> Dials made</span><small>See sizes &amp; items</small>${ic('right', 18, 2.2)}</a>`;
+  const dialRow = `<a class="hm-line" href="#/dialreport?r=1"><span class="hm-ico dial">${ic('dial', 22, 2.2)}</span><span class="hm-lm"><b>${num(dialsToday)}</b> Dials sent to production</span><small>See sizes &amp; items</small>${ic('right', 18, 2.2)}</a>`;
   const payRow = pt ? `<a class="hm-line" href="#/payreport"><span class="hm-ico pay">${ic('cash', 22, 2.2)}</span><span class="hm-lm">Payments</span><span class="hm-pr"><b class="g">+${rupee(pt.i)}</b><b class="r">-${rupee(pt.o)}</b></span>${ic('right', 18, 2.2)}</a>` : '';
   const activity = `<section class="card hm-sec"><div class="hm-h"><h2>Today's activity</h2><a class="link" href="#/reports">See all ${ic('right', 16, 2.4)}</a></div>
     ${dialRow}${payRow}
@@ -60,7 +60,7 @@ function vHome() {
   </section>`;
 
   return `${updBar()}${showInstall ? `<div class="install"><span class="t"><b>Install ARTIME Stock</b><small>Opens full screen like a normal app</small></span><button data-act="install">Install</button></div>` : ''}
-  ${today3}${reorder}${overview}${activity}`;
+  ${today3}${reorder}${prodCard()}${overview}${activity}`;
 }
 
 function itemRow(i) {
@@ -91,8 +91,8 @@ function actRow(e, nm) {
   const dl = !inn && (isDial(e.code) || !!e.via);
   const left = dl ? skippedOf(e.note).map((c) => String(nm[c] || c).split(' - ')[0]) : [];
   const by = String(e.by || '').trim(), left2 = moveLeft(e);
-  const tap = dl && e.id ? ` tap" data-act="dialdetail" data-id="${esc(e.id)}` : '';
+  const tap = dl && e.type !== 'sold' && e.id ? ` tap" data-act="dialdetail" data-id="${esc(e.id)}` : '';
   return `<div class="act${tap}"><span class="aic ${inn ? 'in' : 'out'}">${ic(inn ? 'up' : 'down', 22, 2.2)}</span>
-    <div class="am"><b>${dl ? 'Dial Out' : 'Stock ' + (inn ? 'In' : 'Out')}</b><span>${esc(nm[e.code] || e.code)}${left.length ? ' - without ' + esc(left.join(', ')) : ''}</span>${by && by !== 'Old app' && by !== '-' ? `<span class="who">by ${esc(by)}</span>` : ''}</div>
+    <div class="am"><b>${e.type === 'sold' ? 'Dial Out' : isDial(e.code) && inn ? 'Dial Ready' : dl ? 'Sent to Production' : 'Stock ' + (inn ? 'In' : 'Out')}</b><span>${esc(nm[e.code] || e.code)}${left.length ? ' - without ' + esc(left.join(', ')) : ''}</span>${by && by !== 'Old app' && by !== '-' ? `<span class="who">by ${esc(by)}</span>` : ''}</div>
     <div class="ar"><b class="${inn ? 'g' : 'r'}">${inn ? '+' : '-'}${num(e.qty)}</b><span class="${e.pending ? 'pend' : ''}">${e.pending ? 'Waiting to sync' : esc(when(e))}</span></div>${left2 ? `<button class="ebtn" data-act="editmv" data-id="${esc(e.id)}" data-t="${e.type}" aria-label="Change this entry">${ic('pencil', 16)}<small>${left2} min</small></button>` : ''}</div>`;
 }

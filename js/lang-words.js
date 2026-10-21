@@ -105,3 +105,18 @@ const HI = {
   'This PIN has no name in the Users tab. Type the name in the Name column.': 'इस PIN के आगे Users टैब में नाम नहीं है। Name कॉलम में नाम लिखें।', 'The Payments link did not answer correctly. Use the link ending in /exec, deployed for Anyone.': 'भुगतान लिंक ने सही जवाब नहीं दिया। /exec पर खत्म होने वाला लिंक इस्तेमाल करें, जो Anyone के लिए डिप्लॉय हो।', 'User list unavailable. Try again later.': 'यूज़र सूची उपलब्ध नहीं। बाद में कोशिश करें।', 'This PIN is used by two people. Ask the admin.': 'यह PIN दो लोगों का है। एडमिन से कहें।',
   'Too many wrong PINs. Wait 10 minutes.': 'बहुत ज़्यादा गलत PIN। 10 मिनट रुकें।', 'This user is switched off.': 'यह यूज़र बंद है।'
 };
+
+Object.assign(HI, {
+  'Production': 'प्रोडक्शन', 'Send to Production': 'प्रोडक्शन को भेजें', 'Sent to Production': 'प्रोडक्शन को भेजा', 'Dial Ready': 'डायल तैयार',
+  'At production': 'प्रोडक्शन में', 'Ready dials': 'तैयार डायल', 'Material in stock': 'माल स्टॉक में', 'Dials out': 'डायल आउट', 'By dial size': 'डायल साइज़ के अनुसार',
+  'Out (all)': 'आउट (कुल)', 'Recent': 'हाल के', 'Open': 'खोलें', 'Record Send to Production': 'प्रोडक्शन को भेजना दर्ज करें', 'Record Dial Ready': 'डायल तैयार दर्ज करें',
+  'Dial Ready recorded': 'डायल तैयार दर्ज हुआ', 'Dial Out recorded': 'डायल आउट दर्ज हुआ', 'Dials sent to production': 'प्रोडक्शन को भेजे डायल',
+  'Finished dials came back from production': 'तैयार डायल प्रोडक्शन से वापस आए', 'Ready dials sold or sent out': 'तैयार डायल बेचे या भेजे गए',
+  'Finished dials came back': 'तैयार डायल वापस आए', 'Ready dials sold or sent out.': 'तैयार डायल बेचे या भेजे गए', 'Parts go out for making dials': 'डायल बनाने के लिए पार्ट्स बाहर गए',
+  'The parts go out together for making dials': 'डायल बनाने के लिए सारे पार्ट्स साथ में बाहर जाते हैं', 'Sent, ready and out dials': 'भेजे, तैयार और आउट डायल',
+  'Material, dials at production, ready and out': 'माल, प्रोडक्शन में, तैयार और आउट डायल', 'Sent to Production report': 'प्रोडक्शन को भेजने की रिपोर्ट',
+  'Nothing sent to production': 'प्रोडक्शन को कुछ नहीं भेजा', 'Received from': 'किससे मिले', 'Sold to / Order': 'किसे बेचा / ऑर्डर', 'These dials were made earlier (opening stock)': 'ये डायल पहले बने थे (शुरुआती स्टॉक)',
+  'How many dials': 'कितने डायल', 'Dial size': 'डायल साइज़', 'By dial size ': 'डायल साइज़ के अनुसार'
+});
+Object.assign(HI, { 'Material (dials)': 'माल (डायल)', 'Material = dials your parts in stock can make. The small name is the part that runs out first.': 'माल = स्टॉक के पार्ट्स से कितने डायल बन सकते हैं। छोटा नाम उस पार्ट का है जो सबसे पहले खत्म होगा।' });
+Object.assign(HI, { 'All items': 'सभी आइटम', 'Red = out of stock, amber = running low.': 'लाल = स्टॉक खत्म, पीला = कम बचा है।' });

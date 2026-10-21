@@ -7,6 +7,7 @@ const S = {
   history: store.get('history', []),
   queue: store.get('queue', []),
   failed: store.get('failed', []),
+  dials: store.get('dials', []), prodStart: store.get('prodStart', ''),
   synced: store.get('synced', null),
   loading: false, syncing: false, error: '',
   filter: { q: '', cat: 'all', status: 'all' },
@@ -88,6 +89,8 @@ async function apiPost(body) {
 function applyData(j) {
   if (Array.isArray(j.items)) { S.items = j.items; store.set('items', S.items); }
   if (Array.isArray(j.history)) { S.history = j.history; store.set('history', S.history); }
+  if (Array.isArray(j.dials)) { S.dials = j.dials; store.set('dials', S.dials); }
+  if (typeof j.prodStart === 'string') { S.prodStart = j.prodStart; store.set('prodStart', S.prodStart); }
   if (Array.isArray(j.reorderSetup)) store.set('rsetup', j.reorderSetup);
   if (j.reorderMessage) store.set('rmsg', j.reorderMessage);
   if (Array.isArray(j.reorders)) store.set('rlog', j.reorders);

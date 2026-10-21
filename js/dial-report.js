@@ -21,5 +21,5 @@ function vDialReport() {
   };
   return `${periodBar(sizeSel)}
     <section class="rsum"><div class="b"><small>Dials made</small><b>${num(made)}</b></div><div class="g"><small>Entries</small><b>${num(entries.length)}</b></div><div class="r"><small>Sizes</small><b>${codes.length}</b></div></section>
-    ${codes.length ? codes.map(card).join('') : `<div class="card empty"><b>No Dial Out</b>Nothing recorded in this period.</div>`}`;
+    ${codes.length ? codes.map(card).join('') : `<div class="card empty"><b>Nothing sent to production</b>Nothing recorded in this period.</div>`}`;
 }
