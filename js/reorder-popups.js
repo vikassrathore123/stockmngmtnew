@@ -46,7 +46,7 @@ function openDialDetail(id) {                      // tap a Dial Out: which item
   const sk = skippedOf(e.note), left = moveLeft(Object.assign({}, e, { code }));
   let el = document.getElementById('rs'); if (!el) { el = document.createElement('div'); el.id = 'rs'; document.body.appendChild(el); }
   el.innerHTML = `<div class="rsb" data-rx="close"><div class="rsc" onclick="event.stopPropagation()"><div class="grab"></div>
-    <h3>Sent to Production - ${esc(nm[code] || code)}</h3>
+    <h3>Material to Production - ${esc(nm[code] || code)}</h3>
     <small>${num(e.qty)} ${Number(e.qty) === 1 ? 'dial' : 'dials'} · ${esc(e.pending ? 'Waiting to sync' : when(e))}${e.by && e.by !== 'Old app' && e.by !== '-' ? ' · by ' + esc(e.by) : ''}</small>
     <div class="bl">${dialParts(code).map((c) => { const used = !sk.includes(c); return `<div class="bi"><span class="bn"><b>${esc(nm[c] || c)}</b></span><b class="${used ? 'r' : ''}" style="min-width:70px;text-align:right">${used ? '-' + num(e.qty) : 'not used'}</b></div>`; }).join('')}</div>
     ${left ? `<button class="go" data-act="editmv" data-id="${esc(e.id)}" data-t="out">Change this entry</button>` : ''}
@@ -58,7 +58,7 @@ function openEditMove(id, type) {
   const dl = isDial(e.code), nm = {}; items().forEach((i) => { nm[i.code] = i.title; });
   let el = document.getElementById('rs'); if (!el) { el = document.createElement('div'); el.id = 'rs'; document.body.appendChild(el); }
   el.innerHTML = `<div class="rsb" data-rx="close"><div class="rsc" onclick="event.stopPropagation()"><div class="grab"></div><h3>Change this entry</h3>
-    <small>${esc(nm[e.code] || e.code)} · ${e.type === 'sold' ? 'Dial Out' : dl && e.type === 'in' ? 'Dial Ready' : dl ? 'Sent to Production' : e.type === 'in' ? 'Stock In' : 'Stock Out'} · by ${esc(e.by)} · you can change it for ${left} more min</small>
+    <small>${esc(nm[e.code] || e.code)} · ${e.type === 'sold' ? 'Dial Out' : dl && e.type === 'in' ? 'Dial Ready' : dl ? 'Material to Production' : e.type === 'in' ? 'Stock In' : 'Stock Out'} · by ${esc(e.by)} · you can change it for ${left} more min</small>
     <label>${dl ? 'How many dials' : 'Quantity'}</label><input id="ed-qty" type="number" inputmode="decimal" value="${esc(e.qty)}">
     ${dl ? '' : `<label>${e.type === 'in' ? 'Supplier' : 'Used for'}</label><input id="ed-party" value="${esc(e.party || '')}">
     <label>Reference No.</label><input id="ed-ref" value="${esc(e.ref || '')}">

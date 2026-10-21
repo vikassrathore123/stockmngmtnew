@@ -56,7 +56,7 @@ function renderSheet() {
     el.innerHTML = `<div class="scrim" data-act="close"><div class="sheet" role="dialog" aria-label="New entry"><div class="grab"></div><h3>New entry</h3><div class="acts">
       <a class="bigact in" href="#/in">${ic('up', 34, 2.2)}<span><b>Stock In</b><small>Add incoming stock</small></span></a>
       <a class="bigact out" href="#/out">${ic('down', 34, 2.2)}<span><b>Stock Out</b><small>Record outgoing stock</small></span></a>
-      <a class="bigact dial" href="#/dial">${ic('dial', 34, 2.2)}<span><b>Send to Production</b><small>Parts go out for making dials</small></span></a>
+      <a class="bigact dial" href="#/dial">${ic('dial', 34, 2.2)}<span><b>Send Material to Production</b><small>Material goes out for making dials</small></span></a>
       <a class="bigact in" href="#/ready">${ic('check', 34, 2.2)}<span><b>Dial Ready</b><small>Finished dials came back</small></span></a>
       <a class="bigact out" href="#/sold">${ic('down', 34, 2.2)}<span><b>Dial Out</b><small>Ready dials sold or sent out</small></span></a></div></div></div>`;
     return;
@@ -68,7 +68,7 @@ function renderSheet() {
   el.innerHTML = `<div class="scrim" data-act="close"><div class="sheet" role="dialog" aria-label="${esc(it.title)}"><div class="grab"></div>
     <div class="hd">${art(it.base, 64)}<div style="flex:1;min-width:0"><b>${esc(it.title)}</b><small>${esc(it.code)}</small></div>${pill(it.st, it.code)}</div>
     <div class="nums"><div><small>Current Stock</small><b>${num(it.eff)}</b></div><div><small>Reorder Level</small><b>${num(it.min)}</b></div><div><small>Unit</small><b style="font-size:17px;line-height:2">${esc(unitLabel(it.unit))}</b></div></div>
-    ${isDial(it.code) ? `<div class="two" style="margin-top:0"><a class="bigact dial" style="padding:14px" href="#/dial?code=${encodeURIComponent(it.code)}">${ic('dial', 26, 2.2)}<b style="font-size:17px">Send to Production</b></a></div>` : `<div class="two" style="margin-top:0"><a class="bigact in" style="padding:14px" href="#/in?code=${encodeURIComponent(it.code)}">${ic('up', 26, 2.2)}<b style="font-size:17px">Stock In</b></a><a class="bigact out" style="padding:14px" href="#/out?code=${encodeURIComponent(it.code)}">${ic('down', 26, 2.2)}<b style="font-size:17px">Stock Out</b></a></div>`}
+    ${isDial(it.code) ? `<div class="two" style="margin-top:0"><a class="bigact dial" style="padding:14px" href="#/dial?code=${encodeURIComponent(it.code)}">${ic('dial', 26, 2.2)}<b style="font-size:17px">Send Material to Production</b></a></div>` : `<div class="two" style="margin-top:0"><a class="bigact in" style="padding:14px" href="#/in?code=${encodeURIComponent(it.code)}">${ic('up', 26, 2.2)}<b style="font-size:17px">Stock In</b></a><a class="bigact out" style="padding:14px" href="#/out?code=${encodeURIComponent(it.code)}">${ic('down', 26, 2.2)}<b style="font-size:17px">Stock Out</b></a></div>`}
     <h4>Recent movements</h4>${mv.length ? mv.map((e) => actRow(e, nm)).join('') : '<div class="empty" style="padding:14px">No movements for this item yet.</div>'}</div></div>`;
 }
 

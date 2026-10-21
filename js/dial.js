@@ -24,7 +24,7 @@ function vDial() {
     <div class="fl">Dial size<i>*</i></div>
     <div class="sizes">${st.ds.map((d) => `<button class="size ${d.code === f.dcode ? 'on' : ''}" data-act="dsize" data-v="${esc(d.code)}">${esc(sizeLabel(d.size) || d.size)}</button>`).join('') || '<div class="empty-card">No dial items loaded yet. Go back and sync first.</div>'}</div>
     <div id="fcard"></div>
-    <label class="fl" for="qty">How many dials<i>*</i></label>
+    <label class="fl" for="qty">Material for how many dials<i>*</i></label>
     <div class="qty"><button data-act="qminus" aria-label="Decrease">${ic('minus', 22, 2.2)}</button><input id="qty" type="number" inputmode="decimal" min="0" step="any" value="${esc(f.qty)}" data-bind="qty"><button data-act="qplus" aria-label="Increase">${ic('plus', 22, 2.2)}</button><span class="unit">Pcs</span></div>
     <div class="hint" id="qhint"></div>
     <div class="fl" style="margin-top:8px">Date<i>*</i></div>
@@ -35,7 +35,7 @@ function vDial() {
     </div>
     <label class="fl" for="note">Notes <small>(optional)</small></label>
     <div class="field">${ic('pencil', 20)}<input id="note" placeholder="Add notes..." value="${esc(f.note)}" data-bind="note" autocomplete="off"></div>
-    <button class="submit" id="fsubmit" data-act="submit">${ic('down', 24, 2.2)}<span>Record Send to Production</span></button>
+    <button class="submit" id="fsubmit" data-act="submit">${ic('down', 24, 2.2)}<span>Record Material to Production</span></button>
   </div>`;
 }
 function updateDial() {
@@ -66,7 +66,7 @@ async function submitDial() {
   const e = { id: newId(), ts: Date.now(), type: 'out', code: st.row.code, qty: st.q, date: f.date || today(), party: (f.used || '').trim() || 'Production', ref: (f.ref || '').trim(), note };
   S.queue.push(e); saveQueue();
   const online = navigator.onLine && S.url;
-  const pop = { kind: 'out', title: 'Sent to Production', item: st.row.title, qty: '-' + num(e.qty) + ' dial' + (e.qty === 1 ? '' : 's'), now: left.length ? 'Without ' + left.map((p) => p.name).join(', ') : 'All parts for this size were taken out', status: online ? 'ok' : 'warn', msg: online ? 'Saving to Google Sheets in background' : 'Saved on this phone. It will sync when you are online.' };
+  const pop = { kind: 'out', title: 'Material to Production', item: st.row.title, qty: '-' + num(e.qty) + ' dial' + (e.qty === 1 ? '' : 's'), now: left.length ? 'Without ' + left.map((p) => p.name).join(', ') : 'All parts for this size were taken out', status: online ? 'ok' : 'warn', msg: online ? 'Saving to Google Sheets in background' : 'Saved on this phone. It will sync when you are online.' };
   f.qty = 1; f.ref = ''; f.note = ''; f.skip = [];
   render();
   showPopup(pop);

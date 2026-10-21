@@ -88,7 +88,7 @@ function topForm(type) {
   if (type === 'ready' || type === 'sold') return `<header class="top center"><a class="ibtn" href="#/prod" aria-label="Back">${ic('left', 26)}</a>
     <div class="grow"><h1>${type === 'ready' ? 'Dial Ready' : 'Dial Out'}</h1><div class="sub">${type === 'ready' ? 'Finished dials came back from production' : 'Ready dials sold or sent out'}</div></div><span class="spacer"></span></header>`;
   if (type === 'dial') return `<header class="top center"><a class="ibtn" href="#/home" aria-label="Back">${ic('left', 26)}</a>
-    <div class="grow"><h1>Send to Production</h1><div class="sub">The parts go out together for making dials</div></div><span class="spacer"></span></header>`;
+    <div class="grow"><h1>Send Material to Production</h1><div class="sub">All the parts go out together for making dials</div></div><span class="spacer"></span></header>`;
   return `<header class="top center"><a class="ibtn" href="#/home" aria-label="Back">${ic('left', 26)}</a>
     <div class="grow"><h1>Stock ${type === 'in' ? 'In' : 'Out'}</h1><div class="sub">${type === 'in' ? 'Add incoming stock to inventory' : 'Remove stock from inventory'}</div></div><span class="spacer"></span></header>`;
 }

@@ -1,5 +1,5 @@
-/* production.js - Production: material in stock, dials at production, ready dials, dials out. Part of ARTIME Stock; loaded by index.html in order.
-   Flow: Stock In (parts) > Send to Production (type 'out' on a DIL code, parts leave stock) > Dial Ready (type 'in' on the DIL code) > Dial Out (type 'sold', its own sheet). */
+/* production.js - Production: material in stock, dials in production, ready dials, dials out. Part of ARTIME Stock; loaded by index.html in order.
+   Flow: Stock In (parts) > Send Material to Production (type 'out' on a DIL code, parts leave stock) > Dial Ready (type 'in' on the DIL code) > Dial Out (type 'sold', its own sheet). */
 'use strict';
 const isOpening = (n) => /^\s*opening/i.test(String(n || ''));
 
@@ -39,7 +39,7 @@ function prodCard() {
   const rows = prodRows(); if (!rows.length) return '';
   const t = prodTotals(rows), c = (l, v, cls) => `<div style="flex:1;text-align:center"><small>${l}</small><b class="${cls}" style="display:block;font-size:24px">${num(v)}</b></div>`;
   return `<a class="card hm-sec" href="#/prod" style="display:block;color:inherit;text-decoration:none"><div class="hm-h"><h2>Production</h2><span class="link">Open ${ic('right', 16, 2.4)}</span></div>
-    <div style="display:flex;gap:8px">${c('At production', t.wip, 'a')}${c('Ready dials', t.ready, 'g')}${c('Out today', soldOn(today()), 'r')}</div></a>`;
+    <div style="display:flex;gap:8px">${c('In production', t.wip, 'a')}${c('Ready dials', t.ready, 'g')}${c('Out today', soldOn(today()), 'r')}</div></a>`;
 }
 
 /* material list: every part by name, with its stock for each size (tap a size to open the item) */
@@ -66,23 +66,23 @@ function vProd() {
   const tile = (cls, href, icon, label, val, sub) => `<a class="hm-st ${cls}" href="${href}"><span class="hm-ico">${ic(icon, 22, 2.2)}</span><span><small>${label}</small><b>${val}</b>${sub ? `<small>${sub}</small>` : ''}</span></a>`;
   const grid = `<section class="card hm-sec"><div class="hm-grid">
       ${tile('blue', '#/items', 'cube', 'Material in stock', num(parts.length) + ' items', alertN ? alertN + ' to reorder' : 'All fine')}
-      ${tile('amber', '#/prod', 'gear', 'At production', num(t.wip), 'dials')}
+      ${tile('amber', '#/prod', 'gear', 'In production', num(t.wip), 'dials')}
       ${tile('green', '#/prod', 'check', 'Ready dials', num(t.ready), 'in stock')}
       ${tile('red', '#/reports', 'down', 'Dials out', num(t.sold), 'today ' + num(soldOn(today())))}
     </div></section>`;
   const cell = 'display:grid;grid-template-columns:.9fr 1.1fr 1fr 1fr 1fr;gap:4px;padding:9px 0;align-items:center;text-align:center';
   const table = rows.length ? `<section class="card hm-sec"><div class="hm-h"><h2>By dial size</h2></div>
       <div class="hint" style="margin:0 0 6px">Material = dials your parts in stock can make. The small name is the part that runs out first.</div>
-      <div style="${cell};font-size:12px;opacity:.7;padding-top:0"><span style="text-align:left">Size</span><span>Material (dials)</span><span>At production</span><span>Ready</span><span>Out (all)</span></div>
+      <div style="${cell};font-size:12px;opacity:.7;padding-top:0"><span style="text-align:left">Size</span><span>Material (dials)</span><span>In production</span><span>Ready</span><span>Out (all)</span></div>
       ${rows.map((r) => `<div style="${cell};border-top:1px solid var(--soft2)"><b style="text-align:left">${esc(sizeLabel(r.size) || r.size)}</b><span><b class="${r.make > 0 ? '' : 'r'}">${num(r.make)}</b>${r.limit ? `<small style="display:block;font-size:10px;opacity:.7">${esc(r.limit)}</small>` : ''}</span><b class="${r.wip > 0 ? 'a' : ''}">${num(Math.max(0, r.wip))}</b><b class="${r.stock > 0 ? 'g' : ''}">${num(Math.max(0, r.stock))}</b><span>${num(r.sold)}</span></div>`).join('')}
     </section>` : `<div class="card empty"><b>No dial items yet</b>Sync first so the dial sizes load.</div>`;
   const act = `<div class="acts" style="margin:12px 0">
-      <a class="bigact dial" href="#/dial">${ic('dial', 34, 2.2)}<span><b>Send to Production</b><small>Parts go out for making dials</small></span></a>
+      <a class="bigact dial" href="#/dial">${ic('dial', 34, 2.2)}<span><b>Send Material to Production</b><small>Material goes out for making dials</small></span></a>
       <a class="bigact in" href="#/ready">${ic('check', 34, 2.2)}<span><b>Dial Ready</b><small>Finished dials came back</small></span></a>
       <a class="bigact out" href="#/sold">${ic('down', 34, 2.2)}<span><b>Dial Out</b><small>Ready dials sold or sent out</small></span></a></div>`;
   const recent = sortMoves(moves().filter((e) => isDial(e.code))).slice(0, 8);
   const rec = `<section class="card hm-sec"><div class="hm-h"><h2>Recent</h2></div>${recent.length ? recent.map((e) => actRow(e, nm)).join('') : '<div class="empty"><b>Nothing yet</b>Send dials to production to start.</div>'}</section>`;
-  const note = S.prodStart ? `<div class="hint" style="margin:4px 4px 10px">Counting dials sent to production from ${esc(dLong(S.prodStart))}.</div>` : '';
+  const note = S.prodStart ? `<div class="hint" style="margin:4px 4px 10px">Counting material sent to production from ${esc(dLong(S.prodStart))}.</div>` : '';
   return `${act}${grid}${table}${note}${matList(its)}${rec}`;
 }
 
@@ -97,7 +97,7 @@ function prodState(type) {
   if (!row) err = 'Choose a dial size.';
   else if (!(q > 0)) err = 'Enter a quantity above 0.';
   else if (type === 'sold' && q > cap) err = cap > 0 ? `Only ${num(cap)} ready dial${cap === 1 ? '' : 's'} available.` : 'No ready dials of this size.';
-  else if (type === 'ready' && !open && q > cap) err = cap > 0 ? `Only ${num(cap)} dial${cap === 1 ? ' is' : 's are'} at production. Tick "opening stock" if these were made earlier.` : 'Nothing is at production for this size. Tick "opening stock" if these were made earlier.';
+  else if (type === 'ready' && !open && q > cap) err = cap > 0 ? `Only ${num(cap)} dial${cap === 1 ? ' is' : 's are'} in production. Tick "opening stock" if these were made earlier.` : 'Nothing is in production for this size. Tick "opening stock" if these were made earlier.';
   return { f, rows, row, q, cap, open, err, ok: !err };
 }
 function vProdForm(type) {
@@ -126,7 +126,7 @@ function updateProdForm() {
   const type = route().name, st = prodState(type), card = $('#fcard'); if (!card) return;
   const r = st.row, ready = type === 'ready';
   card.innerHTML = r ? `<div class="pcard"><div class="head">${art('Dial', 76)}<div><b>${esc(r.code)}</b><small>${esc(r.title)}</small></div></div>
-    <div class="nums"><div><small>At production</small><b class="a">${num(Math.max(0, r.wip))}</b><span>dials</span></div>
+    <div class="nums"><div><small>In production</small><b class="a">${num(Math.max(0, r.wip))}</b><span>dials</span></div>
     <div><small>Ready</small><b class="g">${num(Math.max(0, r.stock))}</b><span>dials</span></div>
     <div><small>Out (all)</small><b class="u">${num(r.sold)}</b><span>dials</span></div></div></div>` : '';
   const hint = $('#qhint');

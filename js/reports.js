@@ -113,7 +113,7 @@ function vReports() {
     ${item || S.repType !== 'all' ? '' : `<div class="dual"><div class="card sec"><div class="sec-h"><h2>Most used</h2></div>${bars(tu, 'r', '-')}</div>
     <div class="card sec"><div class="sec-h"><h2>Most received</h2></div>${bars(tg, 'g', '+')}</div></div>`}
     <div class="card sec" style="overflow:hidden"><div class="sec-h"><h2>All movements</h2><small class="cnt" id="repcnt">${list.length}</small></div>
-      <div class="chips inner">${REP_TYPES.map((t) => tchip(t[0], t[1])).join('')}<a class="chip dialchip" href="#/dialreport">${ic('dial', 16)}Sent to Production</a></div>
+      <div class="chips inner">${REP_TYPES.map((t) => tchip(t[0], t[1])).join('')}<a class="chip dialchip" href="#/dialreport">${ic('dial', 16)}Material to Production</a></div>
       <div class="search inner">${ic('search', 20)}<input id="rq" type="search" placeholder="Search item, supplier or note" value="${esc(S.repQ)}" data-bind="rq" autocomplete="off"></div>
       <div id="replist">${repListHTML()}</div></div>`;
 }

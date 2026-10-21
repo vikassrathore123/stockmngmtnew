@@ -43,11 +43,11 @@ function render() {
     case 'in': case 'out': top = topForm(r.name); body = vForm(r.name); break;
     case 'dial': top = topForm('dial'); body = vDial(); break;
     case 'ready': case 'sold': top = topForm(r.name); body = vProdForm(r.name); break;
-    case 'prod': top = topBack('Production', 'Material, dials at production, ready and out', '#/home'); body = vProd(); break;
+    case 'prod': top = topBack('Production', 'Material, dials in production, ready and out', '#/home'); body = vProd(); break;
     case 'items': top = topPlain('Items', 'View and manage all items', true); body = vItems(); break;
     case 'categories': top = topPlain('Categories', 'Manage item categories', true); body = vCategories(); break;
     case 'reports': top = topReports('stock'); body = vReports(); break;
-    case 'dialreport': top = topBack('Sent to Production report', 'Which dials and which items', '#/reports'); body = vDialReport(); break;
+    case 'dialreport': top = topBack('Material to Production report', 'Which dials and which items', '#/reports'); body = vDialReport(); break;
     case 'more': top = topPlain('Settings'); body = vMore(); break;
     case 'set-profile': top = topSub('Edit Profile'); body = vSetProfile(); break;
     case 'set-prefs': top = topSub('Preferences'); body = vSetPrefs(); break;

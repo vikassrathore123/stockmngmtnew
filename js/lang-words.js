@@ -114,9 +114,17 @@ Object.assign(HI, {
   'Finished dials came back from production': 'तैयार डायल प्रोडक्शन से वापस आए', 'Ready dials sold or sent out': 'तैयार डायल बेचे या भेजे गए',
   'Finished dials came back': 'तैयार डायल वापस आए', 'Ready dials sold or sent out.': 'तैयार डायल बेचे या भेजे गए', 'Parts go out for making dials': 'डायल बनाने के लिए पार्ट्स बाहर गए',
   'The parts go out together for making dials': 'डायल बनाने के लिए सारे पार्ट्स साथ में बाहर जाते हैं', 'Sent, ready and out dials': 'भेजे, तैयार और आउट डायल',
-  'Material, dials at production, ready and out': 'माल, प्रोडक्शन में, तैयार और आउट डायल', 'Sent to Production report': 'प्रोडक्शन को भेजने की रिपोर्ट',
+  'Material, dials in production, ready and out': 'माल, प्रोडक्शन में, तैयार और आउट डायल', 'Sent to Production report': 'प्रोडक्शन को भेजने की रिपोर्ट',
   'Nothing sent to production': 'प्रोडक्शन को कुछ नहीं भेजा', 'Received from': 'किससे मिले', 'Sold to / Order': 'किसे बेचा / ऑर्डर', 'These dials were made earlier (opening stock)': 'ये डायल पहले बने थे (शुरुआती स्टॉक)',
   'How many dials': 'कितने डायल', 'Dial size': 'डायल साइज़', 'By dial size ': 'डायल साइज़ के अनुसार'
 });
 Object.assign(HI, { 'Material (dials)': 'माल (डायल)', 'Material = dials your parts in stock can make. The small name is the part that runs out first.': 'माल = स्टॉक के पार्ट्स से कितने डायल बन सकते हैं। छोटा नाम उस पार्ट का है जो सबसे पहले खत्म होगा।' });
 Object.assign(HI, { 'All items': 'सभी आइटम', 'Red = out of stock, amber = running low.': 'लाल = स्टॉक खत्म, पीला = कम बचा है।' });
+Object.assign(HI, {
+  'Send Material to Production': 'प्रोडक्शन को माल भेजें', 'Material to Production': 'प्रोडक्शन को माल भेजा', 'Record Material to Production': 'प्रोडक्शन को माल भेजना दर्ज करें',
+  'In production': 'प्रोडक्शन में', 'Material sent to production': 'प्रोडक्शन को भेजा माल', 'No material sent to production': 'प्रोडक्शन को कोई माल नहीं भेजा',
+  'Material goes out for making dials': 'डायल बनाने के लिए माल बाहर जाता है', 'All the parts go out together for making dials': 'डायल बनाने के लिए सारे पार्ट्स साथ में बाहर जाते हैं',
+  'Counting material sent to production from': 'प्रोडक्शन को भेजा माल गिना जा रहा है, शुरू:', 'Material for how many dials': 'कितने डायल का माल',
+  'Material to Production report': 'प्रोडक्शन को माल की रिपोर्ट', 'Material to Production recorded': 'प्रोडक्शन को माल भेजा'
+});
+Object.assign(HI, { 'Material, dials in production, ready and out': 'माल, प्रोडक्शन में, तैयार और आउट डायल' });
