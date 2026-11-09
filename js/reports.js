@@ -22,13 +22,17 @@ function repMoves() {                                       // movements for the
   if (w.custom && S.rangeHist && S.rangeHist.key === w.from + '|' + w.to) return S.queue.map((e) => Object.assign({}, e, { pending: true })).concat(S.rangeHist.rows);
   return moves();
 }
+function repEnsure() { const w = repWin(); if (!w.custom) ensureCover(w.from); }   // a longer period: fetch what the phone does not hold yet (once)
+const covNote = () => S.covBusy ? `<div class="banner" style="margin-top:10px"><i class="clk"></i>Loading older entries from the sheet… they stay saved on this phone.</div>`
+  : S.covErr && S.cov && S.cov !== 'legacy' && repWin().from < S.cov
+    ? `<div class="banner bad" style="margin-top:10px">${S.covErr === 'old' ? 'Older entries need the updated Stock script. Showing what is saved on this phone.' : 'No connection. Showing what is saved on this phone.'}</div>` : '';
 async function loadRange() {                               // asks the Stock script for exactly these dates
   const w = repWin(); if (!w.custom || !S.url) return;
   const key = w.from + '|' + w.to; if ((S.rangeHist && S.rangeHist.key === key) || S.rangeBusy === key) return;
   if (!navigator.onLine) { S.rangeErr = 'net'; return; }
   S.rangeBusy = key; S.rangeErr = '';
   try {
-    const j = await (await fetch(S.url + (S.url.indexOf('?') < 0 ? '?' : '&') + 'from=' + w.from + '&to=' + w.to, { redirect: 'follow' })).json();
+    const j = await apiGet({ from: w.from, to: w.to });
     if (j && j.ok && j.range && Array.isArray(j.history)) S.rangeHist = { key, rows: j.history }; else S.rangeErr = 'old';
   } catch (e) { S.rangeErr = 'net'; }
   S.rangeBusy = '';
@@ -38,13 +42,13 @@ function periodBar(extra) {                                 // ONE bar: period (
   const ro = (v, l) => `<option value="${v}"${String(S.repRange) === String(v) ? ' selected' : ''}>${l}</option>`;
   const dates = S.repRange === 'custom' ? `<div class="daterow"><label><small>From</small><input type="date" data-bind="repFrom" value="${esc(S.repFrom)}" max="${today()}"></label><label><small>To</small><input type="date" data-bind="repTo" value="${esc(S.repTo)}" max="${today()}"></label></div>` : '';
   const w = repWin(), key = w.from + '|' + w.to;
-  const note = !w.custom ? '' : S.rangeBusy === key ? `<div class="banner" style="margin-top:10px"><i class="clk"></i>Loading these dates from the sheet…</div>`
+  const note = !w.custom ? covNote() : S.rangeBusy === key ? `<div class="banner" style="margin-top:10px"><i class="clk"></i>Loading these dates from the sheet…</div>`
     : S.rangeErr === 'old' ? `<div class="banner bad" style="margin-top:10px">Older dates need the updated Stock script. Showing what is saved on this phone.</div>`
     : S.rangeErr === 'net' ? `<div class="banner bad" style="margin-top:10px">No connection. Showing what is saved on this phone.</div>` : '';
   return `<div class="fbar"><label class="catsel"><select data-bind="repRange" aria-label="Period">${ro(1, 'Today')}${ro(7, 'Last 7 Days')}${ro(14, 'Last 14 Days')}${ro(30, 'Last 30 Days')}${ro(90, 'Last 90 Days')}${ro('custom', 'Custom dates…')}</select></label>${extra || ''}</div>${dates}${note}`;
 }
 
-function repSrc(item) { const all = repMoves(); return item && isDial(item) ? all.filter((e) => e.code === item && e.type === 'out') : expMoves(all).filter((e) => !item || e.code === item); }
+function repSrc(item) { const all = repMoves(); return item && isDial(item) ? all.filter((e) => e.code === item) : expMoves(all).filter((e) => !item || e.code === item); }
 const inWin = (e, w) => e.date >= w.from && e.date <= w.to;
 function repStats(item) {
   const w = repWin(); let ti = 0, to = 0, dials = 0;
@@ -63,7 +67,7 @@ function repFiltered() {
   const raw = sortMoves(all.filter((e) => inWin(e, w)));
   let base, list;
   if (item) {
-    base = isDial(item) ? raw.filter((e) => e.code === item && e.type === 'out') : sortMoves(expMoves(all).filter((e) => inWin(e, w) && e.code === item)); list = base;
+    base = isDial(item) ? raw.filter((e) => e.code === item) : sortMoves(expMoves(all).filter((e) => inWin(e, w) && e.code === item)); list = base;
     if (S.repType === 'in') list = base.filter((e) => e.type === 'in'); else if (S.repType === 'out') list = base.filter((e) => e.type === 'out');
   } else {
     base = raw; list = raw;                                  // a Dial Out stays ONE row; tap it to see the items
@@ -76,12 +80,18 @@ function repListHTML() {
   const { nm, list } = repFiltered();
   if (!list.length) return `<div class="empty"><b>No movements</b>Nothing recorded in this period.</div>`;
   let log = '', last = '';
-  list.slice(0, 150).forEach((e) => {
+  const k = [S.repRange, S.repFrom, S.repTo, S.repType, S.repItem, S.repQ].join('|'); if (k !== S.repKey) { S.repKey = k; S.repShown = 20; }   // a new filter starts at 20 again
+  list.slice(0, S.repShown).forEach((e) => {
     if (e.date !== last) { last = e.date; log += `<div class="daygroup">${esc(dRel(e.date))}${e.date === today() || e.date === ago(1) ? ', ' + esc(dShort(e.date)) : ''}</div>`; }
     log += actRow(e, nm);
   });
+  if (list.length > S.repShown) log += `<button class="morebtn" data-repmore="1">Show 20 more (${list.length - S.repShown} left)</button>`;
   return log;
 }
+document.addEventListener('click', (ev) => {                  // "Show 20 more": the entries are already on the phone, so it is instant
+  const b = ev.target.closest && ev.target.closest('[data-repmore]'); if (!b) return;
+  S.repShown += 20; const el = document.getElementById('replist'); if (el) el.innerHTML = repListHTML();
+});
 function itemsWentHTML(per, nm, k) {                        // "Items that went out / came in": first 3, the rest behind a small button
   const rows = Object.entries(per).filter((x) => x[1][k] > 0).sort((x, y) => y[1][k] - x[1][k]);
   if (!rows.length) return '';
@@ -113,7 +123,7 @@ function vReports() {
     ${item || S.repType !== 'all' ? '' : `<div class="dual"><div class="card sec"><div class="sec-h"><h2>Most used</h2></div>${bars(tu, 'r', '-')}</div>
     <div class="card sec"><div class="sec-h"><h2>Most received</h2></div>${bars(tg, 'g', '+')}</div></div>`}
     <div class="card sec" style="overflow:hidden"><div class="sec-h"><h2>All movements</h2><small class="cnt" id="repcnt">${list.length}</small></div>
-      <div class="chips inner">${REP_TYPES.map((t) => tchip(t[0], t[1])).join('')}<a class="chip dialchip" href="#/dialreport">${ic('dial', 16)}Material to Production</a></div>
+      <div class="chips inner">${REP_TYPES.map((t) => tchip(t[0], t[1])).join('')}<a class="chip dialchip" href="#/dialreport">${ic('dial', 16)}Dial Out</a></div>
       <div class="search inner">${ic('search', 20)}<input id="rq" type="search" placeholder="Search item, supplier or note" value="${esc(S.repQ)}" data-bind="rq" autocomplete="off"></div>
       <div id="replist">${repListHTML()}</div></div>`;
 }

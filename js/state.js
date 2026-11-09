@@ -7,8 +7,8 @@ const S = {
   history: store.get('history', []),
   queue: store.get('queue', []),
   failed: store.get('failed', []),
-  dials: store.get('dials', []), prodStart: store.get('prodStart', ''),
   synced: store.get('synced', null),
+  cov: store.get('cov', ''), srv: store.get('srv', 0), covBusy: '', covErr: '', repShown: 20, repKey: '',   // cov = every movement dated on/after this day is saved on this phone
   loading: false, syncing: false, error: '',
   filter: { q: '', cat: 'all', status: 'all' },
   homeRange: 7, repRange: 7, repFrom: '', repTo: '', repType: 'all', repQ: '', repItem: '', dialSize: '', rangeHist: null, rangeBusy: '', rangeErr: '', reorderF: 'all', reopenMenu: false,
@@ -78,19 +78,56 @@ const pill = (st, code) => {
 };
 
 /* ================= API ================= */
-async function apiGet() {
-  const r = await fetch(S.url, { redirect: 'follow' });
-  return r.json();
+const API_GET_MS = 20000, API_POST_MS = 30000;
+async function apiFetch(url, opts, ms) {          // every call to the sheet ends within `ms`: a slow Google never leaves the app "syncing" forever
+  const ac = new AbortController(), t = setTimeout(() => ac.abort(), ms);
+  try { const r = await fetch(url, Object.assign({ redirect: 'follow', cache: 'no-store', signal: ac.signal }, opts)); return await r.json(); }
+  catch (e) { if (e && e.name === 'AbortError') throw new Error('Google Sheets took too long to answer. Your entries are safe on this phone and will be sent again.'); throw e; }
+  finally { clearTimeout(t); }
 }
+const sinceQ = () => (S.srv && S.history.length ? { since: S.srv } : {});     // "only what changed since my last sync"
+const apiUrl = (q) => S.url + (S.url.indexOf('?') < 0 ? '?' : '&') + Object.keys(q).map((k) => k + '=' + encodeURIComponent(q[k])).join('&');
+async function apiGet(q) { return apiFetch(apiUrl(q || Object.assign({ page: 1 }, sinceQ())), {}, API_GET_MS); }
 async function apiPost(body) {
-  const r = await fetch(S.url, { method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) });
-  return r.json();
+  return apiFetch(S.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({ v: 3, page: 1 }, sinceQ(), body)) }, API_POST_MS);
 }
+const histKey = (e) => e.id || (e.type + '#' + e.row);
+function mergeHistory(j) {                        // new script: add / replace / remove only what changed, keep everything else saved on the phone
+  const map = new Map(S.history.map((e) => [histKey(e), e]));
+  const fresh = new Set(j.history.map(histKey));
+  if (j.winFrom) map.forEach((e, k) => { if (e.date >= j.winFrom && !fresh.has(k)) map.delete(k); });   // rows dated from winFrom on are complete in the reply
+  (j.gone || []).forEach((id) => map.delete(id));                      // entries deleted by their owner
+  j.history.forEach((e) => map.set(histKey(e), e));
+  S.history = Array.from(map.values());
+  if (j.winFrom && (!S.cov || S.cov === 'legacy' || j.partial || S.cov > j.winFrom)) { S.cov = j.winFrom; store.set('cov', S.cov); }
+}
+async function ensureCover(from) {               // makes sure every movement from this date onwards is on the phone (one request, then saved for good)
+  if (!S.url || !S.cov || S.cov === 'legacy' || from >= S.cov || S.covBusy) return;
+  if (!navigator.onLine) { S.covErr = 'net'; return; }
+  S.covBusy = from; S.covErr = '';
+  try {
+    const d0 = parseISO(S.cov); d0.setDate(d0.getDate() - 1); const to = iso(d0);   // the day before what we already hold
+    const j = await apiGet({ from, to });
+    if (!(j && j.ok && j.range && Array.isArray(j.history))) throw new Error('old');
+    const mine = (e) => e.date >= from && e.date <= to;
+    S.history = S.history.filter((e) => !mine(e)).concat(j.history);
+    S.cov = from; store.set('cov', S.cov); store.set('history', S.history);
+  } catch (e) { S.covErr = e && e.message === 'old' ? 'old' : 'net'; }
+  S.covBusy = '';
+  try { const r = route(); if (r.name === 'reports' || r.name === 'dialreport') render(); else if (S.sheet) renderSheet(); } catch (e) { /* ignore */ }
+}
+let retryT = 0;
+function retryLater() { if (retryT) return; retryT = setTimeout(() => { retryT = 0; sync(true); }, 20000); }   // a failed send is tried again by itself
 function applyData(j) {
   if (Array.isArray(j.items)) { S.items = j.items; store.set('items', S.items); }
-  if (Array.isArray(j.history)) { S.history = j.history; store.set('history', S.history); }
-  if (Array.isArray(j.dials)) { S.dials = j.dials; store.set('dials', S.dials); }
-  if (typeof j.prodStart === 'string') { S.prodStart = j.prodStart; store.set('prodStart', S.prodStart); }
+  if (Array.isArray(j.history)) {
+    if (j.page) mergeHistory(j); else { S.history = j.history; S.cov = 'legacy'; store.set('cov', S.cov); }   // an old script still sends its last 400 rows
+    store.set('history', S.history);
+  }
+  if (j.page && j.now) { S.srv = j.now; store.set('srv', S.srv); }
+  if (Array.isArray(j.suppliers)) store.set('sup', j.suppliers);
+  if (Array.isArray(j.usedFor)) store.set('usedfor', j.usedFor);
+  if (j.ms) store.set('ms', Object.assign({ at: Date.now() }, j.ms));
   if (Array.isArray(j.reorderSetup)) store.set('rsetup', j.reorderSetup);
   if (j.reorderMessage) store.set('rmsg', j.reorderMessage);
   if (Array.isArray(j.reorders)) store.set('rlog', j.reorders);
@@ -125,7 +162,7 @@ async function sync(quiet) {
   const batch = S.queue.slice();
   let okRun = false;
   try {
-    const j = await apiPost({ v: 2, reorders: store.get('rq', []), entries: batch.map(({ id, type, code, qty, date, party, ref, note }) => ({ id, type, code, qty, date, party, ref, note, by: store.get('by', '') || '-' })) });
+    const j = await apiPost({ reorders: store.get('rq', []), entries: batch.map(({ id, type, code, qty, date, party, ref, note }) => ({ id, type, code, qty, date, party, ref, note, by: store.get('by', '') || '-' })) });
     if (!j.ok) throw new Error(j.error || 'Sheet error');
     const res = {};
     (j.results || []).forEach((r) => { res[r.id] = r; });
@@ -145,6 +182,7 @@ async function sync(quiet) {
   } catch (e) {
     S.error = errText(e);
     if (!quiet) toast('Saved on this phone. ' + S.error, true);
+    retryLater();
   } finally {
     S.syncing = false; softRender();
     if (okRun && S.queue.length) setTimeout(() => sync(true), 0);   // entries added while this sync was running

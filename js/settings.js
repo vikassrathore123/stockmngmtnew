@@ -81,7 +81,9 @@ function vSetAdv() {
   const installable = S.installEvt && !isStandalone(), ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !isStandalone();
   return `<div class="shead">Local data</div>
     <div class="card group"><div class="kv"><span>Items cached</span><b>${S.items.length}</b></div><div class="kv"><span>Movements cached</span><b>${S.history.length}</b></div>
-      <button class="btn ghost wide" data-act="refresh">${ic('refresh', 18)}Reload from sheet</button>
+      <div class="kv"><span>Entries saved from</span><b>${S.cov && S.cov !== 'legacy' ? esc(dLong(S.cov)) : 'last 400 per sheet'}</b></div>
+      ${(() => { const m = store.get('ms', null); return m ? `<div class="kv"><span>Last sheet reply took</span><b>${(m.total / 1000).toFixed(1)} s</b></div><p class="subtle">Sheet work: wait ${((m.lock || 0) / 1000).toFixed(1)} s, write ${((m.write || 0) / 1000).toFixed(1)} s, formulas ${((m.flush || 0) / 1000).toFixed(1)} s, read ${((m.read || 0) / 1000).toFixed(1)} s</p>` : ''; })()}
+      <button class="btn ghost wide" data-act="reloadall">${ic('refresh', 18)}Reload from sheet</button>
       <button class="btn ghost wide danger" data-act="upforce">${ic('alert', 18)}Clear cache and reload</button>
       <p class="subtle">This forgets the saved app files and loads fresh ones. Entries waiting to sync and everything in Google Sheets stay safe.</p></div>
     <div class="slist tlist">${swRow('download', 'updAlert', true, 'Update reminder', 'Show a message on Home when a new version is available')}</div>

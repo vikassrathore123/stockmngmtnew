@@ -27,8 +27,8 @@ function vForm(type) {
   const R = resolve(f);
   const tab = (k, icon) => `<button class="tab ${f.cat === k ? 'on' : ''}" data-act="fcat" data-v="${k}">${ic(icon, 22)}${CAT_NAME[k]}</button>`;
   const hasSize = !(R.sizes.length === 1 && (R.sizes[0] === 'n/a' || !R.sizes[0]));
-  const sup = uniq(S.history.filter((e) => e.type === 'in' && e.party).map((e) => e.party)).slice(0, 40);
-  const usedFor = uniq(['Order', 'Production', 'Damaged', 'Sample'].concat(S.history.filter((e) => e.type === 'out' && e.party).map((e) => e.party))).slice(0, 40);
+  const sup = uniq(S.history.filter((e) => e.type === 'in' && e.party).map((e) => e.party).concat(store.get('sup', []))).slice(0, 40);
+  const usedFor = uniq(['Order', 'Production', 'Damaged', 'Sample'].concat(S.history.filter((e) => e.type === 'out' && e.party).map((e) => e.party), store.get('usedfor', []))).slice(0, 40);
   const unit = unitLabel(R.row ? R.row.unit : 'pcs');
   return `<div class="form ${type}">
     <div class="tabs">${tab('clock', 'gear')}${tab('packing', 'cube')}</div>
@@ -65,7 +65,6 @@ function formState(type) {
 }
 function updateFormDynamic() {
   const r = route(); if (r.name === 'dial') { updateDial(); return; }
-  if (r.name === 'ready' || r.name === 'sold') { updateProdForm(); return; }
   if (r.name !== 'in' && r.name !== 'out') return;
   const type = r.name; const st = formState(type); const row = st.row;
   const card = $('#fcard'); if (!card) return;

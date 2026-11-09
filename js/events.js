@@ -31,7 +31,9 @@ document.addEventListener('click', (ev) => {
     case 'menuback': S.reopenMenu = true; break;
     case 'fc': S.filter.cat = v; render(); break;
     case 'fs': S.filter.status = v; render(); break;
-    case 'rrange': S.repRange = Number(v); render(); break;
+    case 'rrange': S.repRange = Number(v); repEnsure(); render(); break;
+    case 'covmore': ensureCover(ago(29)); if (S.sheet) renderSheet(); break;
+    case 'reloadall': S.history = []; S.cov = ''; S.srv = 0; store.set('history', []); store.set('cov', ''); store.set('srv', 0); refresh(); break;
     case 'rtype': S.repType = v; render(); break;
     case 'repshare': window.open('https://wa.me/?text=' + encodeURIComponent(repSummaryText()), '_blank'); break;
     case 'repcsv': { const { nm, list } = repFiltered(); downloadCSV('stock-report.csv', [['Date', 'Type', 'Item', 'Code', 'Quantity', 'Supplier / Used for', 'Reference', 'Note', 'By']].concat(list.map((e) => [e.date, isDial(e.code) ? 'Dial Out' : e.type === 'in' ? 'Stock In' : 'Stock Out', nm[e.code] || e.code, e.code, e.qty, e.party || '', e.ref || '', e.note || '', e.by || '']))); break; }
@@ -45,8 +47,6 @@ document.addEventListener('click', (ev) => {
       if (anyOff) f.skip = []; else f.skip = DIAL_PART_NAMES.map((_, i) => i).filter((i) => i !== PAPER_IDX.H && i !== PAPER_IDX.R);
       updateDial(); break; }
     case 'dsize': ensureForm('dial').dcode = v; render(); break;
-    case 'psize': ensureForm(type).dcode = v; render(); break;
-    case 'popen': { const f = ensureForm(type); f.opening = !f.opening; render(); break; }
     case 'fvar': ensureForm(type).variant = v; render(); break;
     case 'qplus': case 'qminus': {
       const f = ensureForm(type); const n = Number(f.qty) || 0;
@@ -54,7 +54,7 @@ document.addEventListener('click', (ev) => {
       const i = $('#qty'); if (i) i.value = f.qty; updateFormDynamic(); break;
     }
     case 'pick': { const i = $('#date'); if (i && i.showPicker) { try { i.showPicker(); } catch (e) { /* not supported */ } } break; }
-    case 'submit': if (type === 'dial') submitDial(); else if (type === 'ready' || type === 'sold') submitProd(type); else submitForm(type); break;
+    case 'submit': if (type === 'dial') submitDial(); else submitForm(type); break;
     case 'pop-ok': closePopup(); break;
     case 'save-url': {
       const val = ($('#url').value || '').trim();
@@ -88,7 +88,7 @@ document.addEventListener('change', (ev) => {
   else if (k === 'cat') { S.filter.cat = el.value; render(); }
   else if (k === 'repItem') { S.repItem = el.value; render(); }
   else if (k === 'repRange') {
-    if (el.value === 'custom') { S.repRange = 'custom'; if (!S.repFrom) S.repFrom = ago(29); if (!S.repTo) S.repTo = today(); loadRange(); } else S.repRange = Number(el.value);
+    if (el.value === 'custom') { S.repRange = 'custom'; if (!S.repFrom) S.repFrom = ago(29); if (!S.repTo) S.repTo = today(); loadRange(); } else { S.repRange = Number(el.value); repEnsure(); }
     render();
   }
   else if (k === 'repFrom' || k === 'repTo') { if (el.value) { S[k] = el.value; loadRange(); render(); } }

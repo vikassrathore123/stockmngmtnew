@@ -5,7 +5,7 @@ function reorderedFor(code) {
   const all = store.get('rlog', []).concat(store.get('rq', []).map((r) => ({ code: r.code, qty: r.qty, date: r.date })));
   const mine = all.filter((r) => r.code === code).sort((x, y) => (x.date < y.date ? 1 : -1))[0];
   if (!mine) return null;
-  const arrived = S.history.concat(S.queue).some((e) => e.type === 'in' && e.code === code && e.date >= mine.date);
+  const arrived = mine.arrived || S.history.concat(S.queue).some((e) => e.type === 'in' && e.code === code && e.date >= mine.date);   // the sheet also says if a Stock In came
   return arrived ? null : mine;                      // a Stock In after the reorder clears the mark
 }
 const waNum = (p) => { let d = String(p || '').replace(/\D/g, '').replace(/^0+/, ''); return d.length === 10 ? '91' + d : d; };
@@ -46,7 +46,7 @@ function openDialDetail(id) {                      // tap a Dial Out: which item
   const sk = skippedOf(e.note), left = moveLeft(Object.assign({}, e, { code }));
   let el = document.getElementById('rs'); if (!el) { el = document.createElement('div'); el.id = 'rs'; document.body.appendChild(el); }
   el.innerHTML = `<div class="rsb" data-rx="close"><div class="rsc" onclick="event.stopPropagation()"><div class="grab"></div>
-    <h3>Material to Production - ${esc(nm[code] || code)}</h3>
+    <h3>Dial Out - ${esc(nm[code] || code)}</h3>
     <small>${num(e.qty)} ${Number(e.qty) === 1 ? 'dial' : 'dials'} · ${esc(e.pending ? 'Waiting to sync' : when(e))}${e.by && e.by !== 'Old app' && e.by !== '-' ? ' · by ' + esc(e.by) : ''}</small>
     <div class="bl">${dialParts(code).map((c) => { const used = !sk.includes(c); return `<div class="bi"><span class="bn"><b>${esc(nm[c] || c)}</b></span><b class="${used ? 'r' : ''}" style="min-width:70px;text-align:right">${used ? '-' + num(e.qty) : 'not used'}</b></div>`; }).join('')}</div>
     ${left ? `<button class="go" data-act="editmv" data-id="${esc(e.id)}" data-t="out">Change this entry</button>` : ''}
@@ -58,7 +58,7 @@ function openEditMove(id, type) {
   const dl = isDial(e.code), nm = {}; items().forEach((i) => { nm[i.code] = i.title; });
   let el = document.getElementById('rs'); if (!el) { el = document.createElement('div'); el.id = 'rs'; document.body.appendChild(el); }
   el.innerHTML = `<div class="rsb" data-rx="close"><div class="rsc" onclick="event.stopPropagation()"><div class="grab"></div><h3>Change this entry</h3>
-    <small>${esc(nm[e.code] || e.code)} · ${e.type === 'sold' ? 'Dial Out' : dl && e.type === 'in' ? 'Dial Ready' : dl ? 'Material to Production' : e.type === 'in' ? 'Stock In' : 'Stock Out'} · by ${esc(e.by)} · you can change it for ${left} more min</small>
+    <small>${esc(nm[e.code] || e.code)} · ${dl ? 'Dial Out' : e.type === 'in' ? 'Stock In' : 'Stock Out'} · by ${esc(e.by)} · you can change it for ${left} more min</small>
     <label>${dl ? 'How many dials' : 'Quantity'}</label><input id="ed-qty" type="number" inputmode="decimal" value="${esc(e.qty)}">
     ${dl ? '' : `<label>${e.type === 'in' ? 'Supplier' : 'Used for'}</label><input id="ed-party" value="${esc(e.party || '')}">
     <label>Reference No.</label><input id="ed-ref" value="${esc(e.ref || '')}">
@@ -78,7 +78,7 @@ async function stockEdit(id, type, del) {
   const ed = del ? { id, type, by: store.get('by', ''), void: true } : { id, type, by: store.get('by', ''), qty: q, date: v('date') || e.date, party: dl ? e.party || '' : v('party'), ref: dl ? e.ref || '' : v('ref'), note: dl ? e.note || '' : v('note') };
   msg('Saving…', true);
   try {
-    const j = await apiPost({ v: 2, entries: [], edits: [ed] });
+    const j = await apiPost({ entries: [], edits: [ed] });
     if (!j || !j.ok) { msg((j && j.error) || 'Could not save the change.'); return; }
     applyData(j);
     const r = (j.editResults || [])[0] || {};

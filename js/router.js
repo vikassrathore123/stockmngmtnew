@@ -16,6 +16,7 @@ function onRoute() {
   if (r.name === 'reports') { const t = r.q.get('t'), rr = r.q.get('r'); if (t) S.repType = t === 'dial' ? 'all' : t; if (rr) S.repRange = Number(rr); }
   if (r.name === 'dialreport' && r.q.get('r')) S.repRange = Number(r.q.get('r'));
   if ((r.name === 'reports' || r.name === 'dialreport') && S.repRange === 'custom') loadRange();
+  else if (r.name === 'reports' || r.name === 'dialreport') repEnsure();
   if (r.name === 'items') S.filter = { q: '', cat: r.q.get('cat') || 'all', status: r.q.get('status') || (store.get('itemsDef', 'all') === 'alert' ? 'alert' : 'all') };
   if (isFormRoute(r.name)) {
     const f = ensureForm(r.name);
@@ -42,12 +43,10 @@ function render() {
   switch (r.name) {
     case 'in': case 'out': top = topForm(r.name); body = vForm(r.name); break;
     case 'dial': top = topForm('dial'); body = vDial(); break;
-    case 'ready': case 'sold': top = topForm(r.name); body = vProdForm(r.name); break;
-    case 'prod': top = topBack('Production', 'Material, dials in production, ready and out', '#/home'); body = vProd(); break;
     case 'items': top = topPlain('Items', 'View and manage all items', true); body = vItems(); break;
     case 'categories': top = topPlain('Categories', 'Manage item categories', true); body = vCategories(); break;
     case 'reports': top = topReports('stock'); body = vReports(); break;
-    case 'dialreport': top = topBack('Material to Production report', 'Which dials and which items', '#/reports'); body = vDialReport(); break;
+    case 'dialreport': top = topBack('Dial Out report', 'Which dials and which items', '#/reports'); body = vDialReport(); break;
     case 'more': top = topPlain('Settings'); body = vMore(); break;
     case 'set-profile': top = topSub('Edit Profile'); body = vSetProfile(); break;
     case 'set-prefs': top = topSub('Preferences'); body = vSetPrefs(); break;
