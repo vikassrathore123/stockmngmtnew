@@ -850,3 +850,8 @@ details.dcard > summary:active { background: var(--soft); }
 .catopen { color: var(--blue); font-weight: 700; font-size: 14px; padding: 8px 6px; }
 .catshare { display: inline-flex; align-items: center; gap: 6px; background: var(--blue); color: #fff; font-weight: 700; font-size: 14px; padding: 10px 14px; border-radius: 12px; border: 0; white-space: nowrap; }
 .catshare:disabled { opacity: .7; } .catshare:active { transform: scale(.96); }
+
+/* Share all catalogs */
+.catall { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 14px 16px; margin-bottom: 12px; border: 0; border-radius: 16px; background: var(--blue); color: #fff; }
+.catall span { display: block; flex: 1; } .catall b { display: block; font-size: 16px; font-weight: 800; } .catall small { display: block; font-size: 13px; opacity: .9; margin-top: 2px; }
+.catall:disabled { opacity: .75; } .catall:active { transform: scale(.98); }
