@@ -3,6 +3,6 @@
 window.APP_CONFIG = {
   appName: 'ARTIME',
   tagline: 'Stock Management',
-  moneyUrl: 'https://script.google.com/macros/s/AKfycbym0jvFpQ7vX-ERMhxPPkulIsNsfeq3fdtfuVXCxCsRqLM8Q9l38TOg9N14-8l9z1qp/exec',   // paste the Payments web-app link here (or in Settings)
-  scriptUrl: 'https://script.google.com/macros/s/AKfycbxCY8mlnLzXE0_Cy9u8IjgwIO_2d3cC1ntcUZXlHKt4paz-F4UMB3blGoRKeW_3bFO-kg/exec'
+  moneyUrl: 'https://script.google.com/macros/s/AKfycbxjU6mpAv_u5tngMQyo1O3GW3PzmkXeKhfcvynf2CiizQKvQi6d5XJ-VsE63RIcYDs7Zg/exec',   // paste the Payments web-app link here (or in Settings)
+  scriptUrl: 'https://script.google.com/macros/s/AKfycbzVM0xUivZC_0G631T0NQsqzwi3x3h9oZ-W007x1p0buT1SMgoIvWT3nEnMxrjnFAJszQ/exec'
 };
